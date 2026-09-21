@@ -64,8 +64,9 @@ additionally needs `bubblewrap`; slice mode needs a systemd user session. See
 
 - **continuity-receipt** — the receipt format and reference verifier are
   published separately at github.com/lbailey94/continuity-receipt (Apache-2.0;
-  also on PyPI). This snapshot vendors a copy under
-  `gate-lite/continuity_receipt/`.
+  also on PyPI). The format's current published revision is
+  `continuity-receipt/0.2` (backward compatible with 0.1); this snapshot
+  vendors the 0.1-era verifier under `gate-lite/continuity_receipt/`.
 - **WhiteMagic** — the governance/memory core:
   github.com/lbailey94/whitemagic (MIT).
 - **mandalaos-sovereign** and **lakshmi** — remain **private for now**; they
@@ -83,3 +84,17 @@ captured evidence in this tree; review them as such.
 `implementation/AI_BRIEFING_2026-09-15.md` is a self-contained briefing written
 for a reviewer with no prior context; `REVIEW_NOTES.md` lists the specific
 questions the maintainer most wants examined.
+
+## 8. The stack
+
+> Local memory → governed execution → verifiable continuity
+
+- [`whitemagic`](https://github.com/lbailey94/whitemagic) — local-first memory and session continuity for AI agents
+- [`continuity-receipt`](https://github.com/lbailey94/continuity-receipt) — portable, offline-verifiable evidence for governed tasks (Apache-2.0)
+- [`mandalaos-gate-lite`](https://github.com/lbailey94/mandalaos-gate-lite) — bounded agent execution that emits receipts (this review snapshot)
+- [`whitemagic-plugins`](https://github.com/lbailey94/whitemagic-plugins) — client integrations and adapters
+
+Each repository stands on its own: WhiteMagic does not require MandalaOS, and
+Continuity Receipt does not require WhiteMagic. Three entrances — **use it** →
+`whitemagic`; **review a protocol** → `continuity-receipt`; **attack the
+security architecture** → `mandalaos-gate-lite`.
