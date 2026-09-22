@@ -193,6 +193,41 @@ class Registry:
         with self._connection() as conn:
             return self._get(conn, "slots", slot_id)
 
+    def cas_slot(
+        self,
+        slot_id: str,
+        expected_states: tuple[str, ...],
+        update: dict,
+        require=None,
+    ) -> dict | None:
+        """Atomic compare-and-swap on a slot's state.
+
+        Read-verify-update runs inside one `BEGIN IMMEDIATE` transaction, so
+        two writers cannot both pass the check — this is the primitive that
+        closes the exec-vs-kill/expiry race (gate-lite issue #1). `require`
+        is an optional extra predicate on the stored slot (e.g. "not
+        expired"); it must also hold for the swap to apply. Returns the
+        updated slot, or None when the state or predicate did not match.
+        """
+        with self._connection() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT json FROM slots WHERE slot_id = ?", (slot_id,)
+            ).fetchone()
+            if row is None:
+                return None
+            slot = json.loads(row["json"])
+            if slot.get("state") not in expected_states:
+                return None
+            if require is not None and not require(slot):
+                return None
+            slot.update(update)
+            conn.execute(
+                "UPDATE slots SET json = ? WHERE slot_id = ?",
+                (json.dumps(slot), slot_id),
+            )
+            return slot
+
     def slots_for(self, tenant_id: str) -> list[dict]:
         with self._connection() as conn:
             return self._for_tenant(conn, "slots", tenant_id)

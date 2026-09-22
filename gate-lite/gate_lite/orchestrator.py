@@ -25,6 +25,17 @@ GATE_CLASS = "gate-lite"
 BLOCKED_STATES = ("terminated", "expired", "denied", "frozen")
 CPU_QUOTA_PERCENT = {"small": 100, "medium": 200}
 TERMINAL_STATES = ("terminated", "expired", "denied")
+# Lifecycle transitions that are in flight (issue #1): a start may not be
+# sealed and a seal may not be started while one of these is held. `starting`
+# is written by the atomic start CAS before any receipt or side effect;
+# `terminating` reserves a terminal transition so a concurrent start cannot
+# slip between the read and the seal.
+STARTING_STATE = "starting"
+TERMINATING_STATE = "terminating"
+PRE_START_STATES = ("placed", "active")
+# States an idle seal may start from. `frozen` is a static non-terminal state
+# (snapshot attestation), not an in-flight transition, so it stays sealable.
+IDLE_SEALABLE_STATES = ("placed", "active", "frozen")
 
 
 class EmitterError(RuntimeError):
@@ -380,7 +391,9 @@ class Orchestrator:
     def _kill_path(self, slot_id: str) -> Path:
         return self.kills_dir / f"{slot_id}.json"
 
-    def _journal_run(self, slot_id: str, pid: int, pgid: int, unit: str | None) -> None:
+    def _journal_run(
+        self, slot_id: str, pid: int, pgid: int, unit: str | None, run_generation: int
+    ) -> None:
         self.runs_dir.mkdir(parents=True, exist_ok=True)
         self._run_path(slot_id).write_text(
             json.dumps(
@@ -389,6 +402,7 @@ class Orchestrator:
                     "pid": pid,
                     "pgid": pgid,
                     "unit": unit,
+                    "run_generation": run_generation,
                     "started_at_ms": int(time.time() * 1000),
                 }
             ),
@@ -414,6 +428,89 @@ class Orchestrator:
             request = {}
         path.unlink(missing_ok=True)
         return request
+
+    def _write_kill_request(
+        self, slot_id: str, signal_name: str, run_generation: int | None
+    ) -> dict:
+        """Bind an operator kill request to a specific run generation.
+
+        The generation binding is what stops a late start from consuming an
+        old request (gate-lite issue #1): `exec_` only honors a request whose
+        generation matches the run it just started.
+        """
+        request = {
+            "slot_id": slot_id,
+            "signal": signal_name,
+            "run_generation": run_generation,
+            "requested_at_ms": int(time.time() * 1000),
+            "requested_by": "operator",
+        }
+        self.kills_dir.mkdir(parents=True, exist_ok=True)
+        self._kill_path(slot_id).write_text(json.dumps(request), encoding="utf-8")
+        return request
+
+    def _terminal_kill_result(self, slot: dict) -> dict:
+        receipt = self._last_receipt(slot, "task.termination")
+        return {
+            "slot_id": slot["slot_id"],
+            "state": slot["state"],
+            "kill_signal": "operator"
+            if receipt and receipt.get("body", {}).get("kill_signal")
+            else None,
+            "receipt_id": receipt.get("receipt_id") if receipt else None,
+            "exec_active": False,
+        }
+
+    def _kill_live_run(
+        self, slot_id: str, run: dict, signal_name: str, wait_s: float
+    ) -> dict:
+        """Signal a live run and wait for its terminal receipt.
+
+        The request stays on disk if the run does not finish within `wait_s`
+        (bound to the run generation) so `exec_` consumes it when the run
+        ends — a kill never seals a run that is still in flight.
+        """
+        generation = run.get("run_generation")
+        self._write_kill_request(slot_id, signal_name, generation)
+        self._signal_run(run, signal_name)
+
+        def finished():
+            fresh = self.registry.get_slot(slot_id)
+            if fresh and fresh["state"] == "terminated":
+                receipt = self._last_receipt(fresh, "task.termination")
+                return {
+                    "slot_id": slot_id,
+                    "state": "terminated",
+                    "kill_signal": "operator",
+                    "receipt_id": receipt.get("receipt_id") if receipt else None,
+                    "exec_active": True,
+                }
+            return None
+
+        total_deadline = time.time() + wait_s
+        grace_deadline = time.time() + min(1.0, max(wait_s, 0.0))
+        result = None
+        while time.time() < grace_deadline and result is None:
+            result = finished()
+            if result is None:
+                time.sleep(0.05)
+        if result is None:
+            self._signal_run(run, "SIGKILL")
+            while time.time() < total_deadline and result is None:
+                result = finished()
+                if result is None:
+                    time.sleep(0.05)
+        if result is not None:
+            return result
+        return {
+            "slot_id": slot_id,
+            "state": (self.registry.get_slot(slot_id) or {}).get("state", "unknown"),
+            "outcome": "deferred",
+            "kill_signal": "operator",
+            "receipt_id": None,
+            "exec_active": True,
+            "hint": "run did not reach a terminal receipt within wait_s; the kill request is bound to the run generation and will be consumed when the run ends",
+        }
 
     @staticmethod
     def _pid_alive(pid: int | None) -> bool:
@@ -649,30 +746,71 @@ class Orchestrator:
             raise ValueError("slot is expired")
         if slot["state"] in BLOCKED_STATES:
             raise ValueError(f"slot is {slot['state']}")
+        previous_state = slot["state"]
 
-        decision = self._emit(
-            slot,
-            "task.decision",
+        # Atomic start (issue #1): reserve the slot with a run generation
+        # before any receipt or side effect, so a concurrent kill/expiry can
+        # never seal a terminal state and then watch a process start. The
+        # expiry predicate is part of the same transaction, so a slot that
+        # expires between the read above and this CAS cannot start either.
+        generation = int(slot.get("run_generation") or 0) + 1
+        started = self.registry.cas_slot(
+            slot_id,
+            PRE_START_STATES,
             {
-                "action": "mandala.exec",
-                "action_args_hash": sha256_prefixed(payload_ref.encode()),
-                "model": {"provider": "gate", "id": "sandbox"},
-                "input_provenance": {
-                    "policy_id": "gate.egress.default",
-                    "allowed_sources": ["gate"],
-                    "observed_sources_hash": sha256_prefixed(b"gate"),
-                },
-                "decision": "allow",
-                "policy_version": self.policy_version,
+                "state": STARTING_STATE,
+                "run_generation": generation,
+                "starting_at_ms": int(time.time() * 1000),
             },
+            require=lambda s: s.get("expires_at", 0) > now_epoch(),
         )
+        if started is None:
+            fresh = self.registry.get_slot(slot_id) or slot
+            raise ValueError(
+                f"start rejected: slot is {fresh['state']} — no process started"
+            )
+        slot = started
+
+        try:
+            decision = self._emit(
+                slot,
+                "task.decision",
+                {
+                    "action": "mandala.exec",
+                    "action_args_hash": sha256_prefixed(payload_ref.encode()),
+                    "model": {"provider": "gate", "id": "sandbox"},
+                    "input_provenance": {
+                        "policy_id": "gate.egress.default",
+                        "allowed_sources": ["gate"],
+                        "observed_sources_hash": sha256_prefixed(b"gate"),
+                    },
+                    "decision": "allow",
+                    "policy_version": self.policy_version,
+                },
+            )
+        except EmitterError:
+            # No receipt, no start: release the reservation so the slot is not
+            # wedged in `starting` (fail-closed but recoverable).
+            self.registry.cas_slot(
+                slot_id, (STARTING_STATE,), {"state": previous_state}
+            )
+            raise
 
         def on_spawn(pid: int, pgid: int, unit: str | None):
-            self._journal_run(slot_id, pid, pgid, unit)
+            self._journal_run(slot_id, pid, pgid, unit, generation)
 
         run_slot = dict(slot)
         run_slot["workspace"] = str(self.workspaces_dir / slot_id)
-        result = self.runner.run(run_slot, payload_ref, on_spawn=on_spawn)
+        try:
+            result = self.runner.run(run_slot, payload_ref, on_spawn=on_spawn)
+        except Exception:
+            # The runner failed before any process of record exists; release
+            # the reservation so the slot can be retried.
+            if self.active_run(slot_id) is None:
+                self.registry.cas_slot(
+                    slot_id, (STARTING_STATE,), {"state": previous_state}
+                )
+            raise
         self._last_exec[slot_id] = result
         self._run_path(slot_id).unlink(missing_ok=True)
 
@@ -694,6 +832,13 @@ class Orchestrator:
         )
 
         kill_request = self._consume_kill_request(slot_id)
+        if kill_request is not None and kill_request.get("run_generation") not in (
+            None,
+            generation,
+        ):
+            # A request bound to an older run must never terminate this one —
+            # a late start cannot consume an old request (issue #1).
+            kill_request = None
         response = {
             "slot_id": slot_id,
             "exit": result.exit_code,
@@ -704,6 +849,8 @@ class Orchestrator:
             response["stderr_hash"] = result.stderr_hash
 
         termination = None
+        final_state = "terminated"
+        fresh_slot = self.registry.get_slot(slot_id) or slot
         if kill_request is not None:
             latency_ms = max(int(time.time() * 1000) - int(kill_request.get("requested_at_ms", 0)), 0)
             termination = self._emit(
@@ -723,18 +870,25 @@ class Orchestrator:
             )
             response["kill_signal"] = "quota"
             response["reason"] = "quota"
+        elif int(fresh_slot.get("expires_at", 0)) <= now_epoch():
+            # Expiry landed while the run was live; the seal is deferred to
+            # here so receipts stay monotonic (decision → execution →
+            # termination) instead of sealing mid-run.
+            termination = self._emit(
+                slot,
+                "task.termination",
+                self._termination_body(slot, "time_expired"),
+            )
+            response["reason"] = "time_expired"
+            final_state = "expired"
 
         if termination is not None:
             response["receipt_ids"].append(termination["receipt_id"])
-            fresh = self.registry.get_slot(slot_id) or slot
-            if fresh["state"] not in TERMINAL_STATES:
-                fresh["state"] = "terminated"
-                self.registry.put_slot(fresh)
+            self.registry.cas_slot(
+                slot_id, (STARTING_STATE,), {"state": final_state}
+            )
         else:
-            fresh = self.registry.get_slot(slot_id) or slot
-            if fresh["state"] not in BLOCKED_STATES:
-                fresh["state"] = "active"
-                self.registry.put_slot(fresh)
+            self.registry.cas_slot(slot_id, (STARTING_STATE,), {"state": "active"})
 
         if idempotency_key:
             self.registry.remember(f"exec:{idempotency_key}", response)
@@ -790,13 +944,30 @@ class Orchestrator:
         kill_signal: str | None = None,
     ) -> dict:
         slot = self._authorized_slot(tenant_id, slot_id)
-        receipt = self._emit(
-            slot, "task.termination", self._termination_body(slot, reason, kill_signal=kill_signal)
+        # Reserve the terminal transition atomically (issue #1): an in-flight
+        # start must never be sealed, and an idle slot must not be sealed
+        # between the read and the write.
+        reserved = self.registry.cas_slot(
+            slot_id, IDLE_SEALABLE_STATES, {"state": TERMINATING_STATE}
         )
-        fresh = self.registry.get_slot(slot_id) or slot
-        if fresh["state"] not in TERMINAL_STATES:
-            fresh["state"] = "terminated"
-            self.registry.put_slot(fresh)
+        if reserved is None:
+            fresh = self.registry.get_slot(slot_id) or slot
+            if fresh["state"] in TERMINAL_STATES:
+                receipt = self._last_receipt(fresh, "task.termination")
+                return {
+                    "slot_id": slot_id,
+                    "task_id": fresh.get("task_id") or self.task_id_for(slot_id),
+                    "receipt_id": receipt.get("receipt_id") if receipt else None,
+                }
+            raise ValueError(
+                f"terminate rejected: slot is {fresh['state']} — a start is in flight"
+            )
+        receipt = self._emit(
+            reserved,
+            "task.termination",
+            self._termination_body(reserved, reason, kill_signal=kill_signal),
+        )
+        self.registry.cas_slot(slot_id, (TERMINATING_STATE,), {"state": "terminated"})
         return {"slot_id": slot_id, "task_id": self.task_id_for(slot_id), "receipt_id": receipt["receipt_id"]}
 
     def kill(self, tenant_id: str, slot_id: str, signal_name: str = "SIGTERM", wait_s: float = 5.0) -> dict:
@@ -807,70 +978,83 @@ class Orchestrator:
         if slot["state"] in TERMINAL_STATES:
             raise ValueError(f"slot is {slot['state']}")
 
-        run = self.active_run(slot_id)
-        if run and self._pid_alive(run.get("pid")):
-            request = {
-                "slot_id": slot_id,
-                "signal": signal_name,
-                "requested_at_ms": int(time.time() * 1000),
-                "requested_by": "operator",
-            }
-            self._kill_path(slot_id).write_text(json.dumps(request), encoding="utf-8")
-            self._signal_run(run, signal_name)
+        for _ in range(2):
+            run = self.active_run(slot_id)
+            if run and self._pid_alive(run.get("pid")):
+                return self._kill_live_run(slot_id, run, signal_name, wait_s)
 
-            def finished():
-                fresh = self.registry.get_slot(slot_id)
-                if fresh and fresh["state"] == "terminated":
-                    receipt = self._last_receipt(fresh, "task.termination")
+            if slot["state"] == STARTING_STATE:
+                # Start in flight, no pid journaled yet (issue #1): bind the
+                # request to this generation and wait for the journal or the
+                # run to finish. Never seal mid-start.
+                generation = int(slot.get("run_generation") or 0)
+                self._write_kill_request(slot_id, signal_name, generation)
+                deadline = time.time() + wait_s
+                while time.time() < deadline:
+                    run = self.active_run(slot_id)
+                    if run and self._pid_alive(run.get("pid")):
+                        return self._kill_live_run(
+                            slot_id, run, signal_name, max(deadline - time.time(), 0.1)
+                        )
+                    fresh = self.registry.get_slot(slot_id) or slot
+                    if fresh["state"] in TERMINAL_STATES:
+                        return self._terminal_kill_result(fresh)
+                    if fresh["state"] != STARTING_STATE:
+                        slot = fresh
+                        break
+                    time.sleep(0.05)
+                else:
+                    fresh = self.registry.get_slot(slot_id) or slot
+                    if fresh["state"] in TERMINAL_STATES:
+                        return self._terminal_kill_result(fresh)
                     return {
                         "slot_id": slot_id,
-                        "state": "terminated",
+                        "state": fresh["state"],
+                        "outcome": "deferred",
                         "kill_signal": "operator",
-                        "receipt_id": receipt.get("receipt_id") if receipt else None,
-                        "exec_active": True,
+                        "receipt_id": None,
+                        "exec_active": False,
+                        "hint": f"start in flight (generation {generation}); the kill request is bound to that generation and will be consumed when the run starts",
                     }
-                return None
+                continue
 
-            total_deadline = time.time() + wait_s
-            grace_deadline = time.time() + min(1.0, max(wait_s, 0.0))
-            result = None
-            while time.time() < grace_deadline and result is None:
-                result = finished()
-                if result is None:
-                    time.sleep(0.05)
-            if result is None:
-                self._signal_run(run, "SIGKILL")
-                while time.time() < total_deadline and result is None:
-                    result = finished()
-                    if result is None:
-                        time.sleep(0.05)
-            if result is not None:
-                return result
-            self._consume_kill_request(slot_id)
+            # Idle slot: reserve the terminal transition atomically so a
+            # concurrent start cannot slip between the read and the seal.
+            reserved = self.registry.cas_slot(
+                slot_id, IDLE_SEALABLE_STATES, {"state": TERMINATING_STATE}
+            )
+            if reserved is None:
+                slot = self.registry.get_slot(slot_id) or slot
+                if slot["state"] in TERMINAL_STATES:
+                    return self._terminal_kill_result(slot)
+                continue  # a start raced in; the next iteration handles it
+            receipt = self._emit(
+                reserved,
+                "task.termination",
+                self._termination_body(reserved, "killed", kill_signal="operator"),
+            )
+            self.registry.cas_slot(
+                slot_id, (TERMINATING_STATE,), {"state": "terminated"}
+            )
+            return {
+                "slot_id": slot_id,
+                "state": "terminated",
+                "kill_signal": "operator",
+                "receipt_id": receipt["receipt_id"],
+                "exec_active": False,
+            }
 
         fresh = self.registry.get_slot(slot_id) or slot
         if fresh["state"] in TERMINAL_STATES:
-            receipt = self._last_receipt(fresh, "task.termination")
-            return {
-                "slot_id": slot_id,
-                "state": fresh["state"],
-                "kill_signal": "operator" if receipt and receipt.get("body", {}).get("kill_signal") else None,
-                "receipt_id": receipt.get("receipt_id") if receipt else None,
-                "exec_active": False,
-            }
-        receipt = self._emit(
-            fresh,
-            "task.termination",
-            self._termination_body(fresh, "killed", kill_signal="operator"),
-        )
-        fresh["state"] = "terminated"
-        self.registry.put_slot(fresh)
+            return self._terminal_kill_result(fresh)
         return {
             "slot_id": slot_id,
-            "state": "terminated",
+            "state": fresh["state"],
+            "outcome": "unknown",
             "kill_signal": "operator",
-            "receipt_id": receipt["receipt_id"],
+            "receipt_id": None,
             "exec_active": False,
+            "hint": "kill could not be bound to a run or an idle slot; retry",
         }
 
     def snapshot(self, tenant_id: str, slot_id: str) -> dict:
@@ -988,11 +1172,28 @@ class Orchestrator:
     def _expire_if_needed(self, slot: dict) -> bool:
         if slot["state"] in TERMINAL_STATES or slot.get("expires_at", 0) > now_epoch():
             return False
-        self._emit(slot, "task.termination", self._termination_body(slot, "time_expired"))
-        fresh = self.registry.get_slot(slot["slot_id"]) or slot
-        if fresh["state"] not in TERMINAL_STATES:
-            fresh["state"] = "expired"
-            self.registry.put_slot(fresh)
+        if slot["state"] in (STARTING_STATE, TERMINATING_STATE):
+            # A start/terminate is in flight; sealing here would break receipt
+            # monotonicity and could seal before a process starts (issue #1).
+            # exec_ applies the expiry after the run, as a termination receipt
+            # that follows task.execution.
+            return False
+        if self.active_run(slot["slot_id"]):
+            # Live run: expiry is applied by exec_ after execution.
+            return False
+        reserved = self.registry.cas_slot(
+            slot["slot_id"], IDLE_SEALABLE_STATES, {"state": TERMINATING_STATE}
+        )
+        if reserved is None:
+            return False
+        self._emit(
+            reserved,
+            "task.termination",
+            self._termination_body(reserved, "time_expired"),
+        )
+        self.registry.cas_slot(
+            slot["slot_id"], (TERMINATING_STATE,), {"state": "expired"}
+        )
         return True
 
     def sweep_expired(self, tenant_id: str | None = None) -> dict:
@@ -1000,6 +1201,12 @@ class Orchestrator:
         sealed = []
         for slot in self.registry.all_slots(tenant_id):
             if slot["state"] in TERMINAL_STATES:
+                continue
+            if slot["state"] in (STARTING_STATE, TERMINATING_STATE):
+                # In-flight transitions seal themselves; never mid-start.
+                continue
+            if self.active_run(slot["slot_id"]):
+                # Live run: exec_ applies the expiry after execution.
                 continue
             if self._expire_if_needed(slot):
                 sealed.append(
