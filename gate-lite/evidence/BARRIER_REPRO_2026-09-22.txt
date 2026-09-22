@@ -1,0 +1,50 @@
+Gate-lite issue #1 — barrier repro evidence
+===========================================
+
+Fix under review : eb5778b89e4138633ade4ebd3dffc6461606c7b2 (public main)
+Evidence file    : carried by the commit that adds this file (see `git log`)
+Generated        : 2026-09-22, from a local run of the public tree
+
+Environment
+-----------
+python        3.12.3
+pytest        9.1.1
+cryptography  50.0.1
+OS            Linux (x86_64)
+
+Command
+-------
+cd gate-lite && python3 tools/barrier_repro.py
+
+File hashes (sha256) at the reviewed tree
+-----------------------------------------
+610972d944dc86c3698075e7af36cec4608c2bc91128d7b0dbb4e7e2a5781748  gate_lite/orchestrator.py
+108c47a58a3982b475034ea632a6906e05f976c4b49a39044326663916ddd62c  gate_lite/registry.py
+96d471eddc4331ed246038ca48a0131f007d5e67af2b41f842b114f43e66d055  tests/test_lifecycle_race.py
+c9726a048c96fbc5e9ba937d24a2232967efbefbf07c76f65cbdf47b3466e96f  tools/barrier_repro.py
+
+Output
+------
+.....                                                                    [100%]
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/test_lifecycle_race.py::TestLifecycleRace::test_expiry_during_start_defers_to_post_run_seal
+PASSED tests/test_lifecycle_race.py::TestLifecycleRace::test_kill_during_start_defers_and_keeps_receipts_monotonic
+PASSED tests/test_lifecycle_race.py::TestLifecycleRace::test_stale_kill_request_cannot_bind_a_late_start
+PASSED tests/test_lifecycle_race.py::TestLifecycleRace::test_start_rejected_after_seal_emits_no_execution
+PASSED tests/test_lifecycle_race.py::TestLifecycleRace::test_kill_live_run_terminates_after_execution
+5 passed in 6.25s
+
+invariant coverage:
+  [PASSED ] no process starts after a terminal seal  (test_start_rejected_after_seal_emits_no_execution)
+  [PASSED ] pre-start kill race returns an explicit outcome (no task.execution)  (test_kill_during_start_defers_and_keeps_receipts_monotonic)
+  [PASSED ] expiry during a start defers to a post-run seal  (test_expiry_during_start_defers_to_post_run_seal)
+  [PASSED ] receipt ordering is monotonic (decision -> execution -> termination)  (test_kill_live_run_terminates_after_execution)
+  [PASSED ] kill requests are bound to the run generation  (test_stale_kill_request_cannot_bind_a_late_start)
+pytest exit: 0
+
+CI
+--
+`.github/workflows/tests.yml` runs the full suite (61 tests) plus this repro on
+every push to `main` and on PRs, and uploads the JUnit XML as the
+`gate-lite-junit` artifact.

@@ -1,0 +1,29 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gate-lite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test deps
+        run: python -m pip install --quiet "cryptography>=42" pytest
+      - name: Run gate-lite suite
+        working-directory: gate-lite
+        run: python -m pytest tests/ -q --junitxml=junit.xml
+      - name: Barrier repro (issue #1 invariants)
+        working-directory: gate-lite
+        run: python tools/barrier_repro.py
+      - name: Upload junit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-lite-junit
+          path: gate-lite/junit.xml
