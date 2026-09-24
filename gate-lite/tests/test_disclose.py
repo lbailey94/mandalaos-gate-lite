@@ -21,7 +21,7 @@ def make_bundle(state: Path) -> tuple[dict, tuple]:
     orch.add_tenant("dogfood", [agent_did])
     (state / "gate.key").write_bytes(keys.private_raw(gate_key))
     issued = orch.pass_("dogfood", agent_did, spend_cap={"minor": 1000, "currency": "USD"})
-    orch.exec_("dogfood", issued["slot_id"], "echo disclose")
+    orch.exec_("dogfood", issued["slot_id"], "echo disclose", token=issued["token"])
     orch.settle("dogfood", issued["slot_id"], "invoice", "inv-disclose", 200)
     terminated = orch.terminate("dogfood", issued["slot_id"])
     return orch.receipt(terminated["task_id"]), (gate_key, gate_did)
@@ -42,7 +42,7 @@ class TestDisclosure(unittest.TestCase):
             redacted, disclosure = redact(bundle, [path], signer=signer)
             self.assertIn("redacted", redacted["receipts"][index]["body"]["spec_ref"])
             self.assertIn("commit", redacted["receipts"][index]["body"]["spec_ref"])
-            self.assertEqual(disclosure[path]["value"], "continuity-receipt/0.1")
+            self.assertEqual(disclosure[path]["value"], "continuity-receipt/0.3")
 
             result = verify_bundle(redacted)
             self.assertEqual(result.verdict, "PROVISIONAL")

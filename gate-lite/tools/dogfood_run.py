@@ -117,7 +117,7 @@ class Dogfood:
 def flow_standard(run: Dogfood) -> str:
     run.cli_json("tenant-add", "--tenant", "dogfood", "--agent", AGENT_DID)
     issued = run.cli_json("pass", "--tenant", "dogfood", "--agent", AGENT_DID, "--minutes", "30", "--spend-minor", "1000")
-    executed = run.cli_json("exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", "echo hello")
+    executed = run.cli_json("exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", "echo hello", "--token", issued["token"])
     run.check("G1", "exec exit 0", executed["exit"] == 0, f"stdout_hash={executed['stdout_hash']}")
     run.check("G1", "exec inside slice quota", executed.get("kill_signal") is None, "no quota/operator kill")
     settled = run.cli_json(
@@ -140,11 +140,12 @@ def flow_snapshot(run: Dogfood) -> str:
     executed = run.cli_json(
         "exec", "--tenant", "dogfood", "--slot", issued["slot_id"],
         "--payload-ref", json.dumps({"program": "python3", "args": ["-c", "print(6*7)"]}),
+        "--token", issued["token"],
     )
     snap = run.cli_json("snapshot", "--tenant", "dogfood", "--slot", issued["slot_id"])
     run.check("G7/snapshot", "frozen + artifact", snap["state"] == "frozen" and Path(snap["artifact"]["path"]).exists(),
               f"{snap['snapshot_id']} {snap['artifact']['bytes']}B")
-    refused = run.cli("exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", "echo frozen")
+    refused = run.cli("exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", "echo frozen", "--token", issued["token"])
     run.check("G7/snapshot", "exec refused while frozen", refused["rc"] == 2 and "frozen" in refused["stderr"],
               refused["stderr"].strip())
     terminated = run.cli_json("terminate", "--tenant", "dogfood", "--slot", issued["slot_id"])
@@ -161,7 +162,7 @@ def flow_restore(run: Dogfood) -> str:
             "args": ["-c", "open('/workspace/artifact.txt','w').write('written inside the sandbox')"],
         }
     )
-    executed = run.cli_json("exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", payload_ref)
+    executed = run.cli_json("exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", payload_ref, "--token", issued["token"])
     run.check("G7/restore", "runner wrote workspace artifact", executed["exit"] == 0, executed["stdout_hash"])
     snap = run.cli_json("snapshot", "--tenant", "dogfood", "--slot", issued["slot_id"])
     run.cli_json("terminate", "--tenant", "dogfood", "--slot", issued["slot_id"], "--reason", "destroyed")
@@ -180,7 +181,8 @@ def flow_restore(run: Dogfood) -> str:
         artifact.exists() and artifact.read_text(encoding="utf-8") == "written inside the sandbox", str(artifact),
     )
     restored_exec = run.cli_json(
-        "exec", "--tenant", "dogfood", "--slot", recreated["slot_id"], "--payload-ref", "echo restored"
+        "exec", "--tenant", "dogfood", "--slot", recreated["slot_id"], "--payload-ref", "echo restored",
+        "--token", recreated["token"],
     )
     run.check("G7/restore", "exec in restored slot", restored_exec["exit"] == 0, restored_exec["stdout_hash"])
     terminated = run.cli_json("terminate", "--tenant", "dogfood", "--slot", recreated["slot_id"])
@@ -192,7 +194,7 @@ def flow_restore(run: Dogfood) -> str:
 def flow_expiry(run: Dogfood) -> str:
     issued = run.cli_json("pass", "--tenant", "dogfood", "--agent", AGENT_DID, "--minutes", "0")
     time.sleep(1.1)
-    late = run.cli("exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", "echo late")
+    late = run.cli("exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", "echo late", "--token", issued["token"])
     run.check("G7/expiry", "exec refused after expiry", late["rc"] == 2 and "expired" in late["stderr"],
               late["stderr"].strip())
     status = run.cli_json("status", "--tenant", "dogfood", "--slot", issued["slot_id"])
@@ -212,7 +214,7 @@ def flow_egress_deny(run: Dogfood) -> str:
     payload_ref = json.dumps(
         {"program": "curl", "args": ["-sS", "-m", "5", "https://example.com"], "net": True, "egress": []}
     )
-    executed = run.cli_json("exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", payload_ref)
+    executed = run.cli_json("exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", payload_ref, "--token", issued["token"])
     run.check("G3", "undeclared egress denied (non-zero exit)", executed["exit"] != 0, f"exit={executed['exit']}")
     terminated = run.cli_json("terminate", "--tenant", "dogfood", "--slot", issued["slot_id"])
     verdict = run.verdict("g3", terminated["task_id"])
@@ -230,6 +232,7 @@ def flow_kill(run: Dogfood) -> str:
     cmd = [
         sys.executable, "-m", "gate_lite.ctl", "--state", str(run.state),
         "exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", "sleep 30",
+        "--token", issued["token"],
     ]
     worker = subprocess.Popen(cmd, cwd=str(ROOT), env=run.env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     run_file = run.state / "runs" / f"{issued['slot_id']}.json"
@@ -266,7 +269,8 @@ def flow_quota_kill(run: Dogfood) -> str:
         {"program": "python3", "args": ["-c", "x=bytearray(2*1024**3); print(len(x))"]}
     )
     step = run.cli(
-        "exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", payload_ref, timeout=180
+        "exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", payload_ref,
+        "--token", issued["token"], timeout=180,
     )
     executed = json.loads(step["stdout"]) if step["rc"] == 0 else {}
     run.check("G2", "memory overrun killed slot", executed.get("kill_signal") == "quota",
@@ -322,14 +326,14 @@ def flow_fail_closed(run: Dogfood) -> None:
     receipts_dir = run.state / "receipts"
     os.chmod(receipts_dir, 0o500)
     try:
-        step = run.cli("exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", "echo unrecorded")
+        step = run.cli("exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", "echo unrecorded", "--token", issued["token"])
     finally:
         os.chmod(receipts_dir, 0o700)
     error = json.loads(step["stderr"]) if step["stderr"].strip() else {}
     run.check("G8", "exec refused (rc=3, emitter_unavailable)",
               step["rc"] == 3 and error.get("code") == "emitter_unavailable", step["stderr"].strip())
 
-    recovered = run.cli_json("exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", "echo recovered")
+    recovered = run.cli_json("exec", "--tenant", "dogfood", "--slot", issued["slot_id"], "--payload-ref", "echo recovered", "--token", issued["token"])
     run.check("G8", "emitter restored, exec proceeds", recovered["exit"] == 0, recovered["stdout_hash"])
     run.cli_json("terminate", "--tenant", "dogfood", "--slot", issued["slot_id"])
 

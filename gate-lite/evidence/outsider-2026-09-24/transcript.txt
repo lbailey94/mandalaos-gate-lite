@@ -1,0 +1,110 @@
+=== [2026-09-24T00:51:28Z] python3 -m venv venv
+=== [2026-09-24T00:51:37Z] venv/bin/pip install -e src/gate-lite
+  Building editable for gate-lite (pyproject.toml): finished with status 'done'
+  Created wheel for gate-lite: filename=gate_lite-0.0.1-0.editable-py3-none-any.whl size=2774 sha256=a6ef0493ffb585f42a8b97ac0493b661a377c1268f99218dd8821288dcdefc02
+  Stored in directory: /tmp/pip-ephem-wheel-cache-qq3d6kgq/wheels/9c/35/36/5465729e056c908b8041023de5402039f7e8d2bd1e3db2846c
+Successfully built gate-lite
+Installing collected packages: pycparser, cffi, cryptography, continuity-receipt, gate-lite
+Successfully installed cffi-2.1.1 continuity-receipt-0.3.3 cryptography-50.0.1 gate-lite-0.0.1 pycparser-3.0
+=== pip freeze (relevant):
+continuity-receipt==0.3.3
+cryptography==50.0.1
+# Editable install with no version control (gate-lite==0.0.1)
+-e <workspace>/src/gate-lite
+
+=== [2026-09-24T00:51:56Z] cd src/gate-lite && python tools/make_vectors.py
+wrote 11 vectors to <workspace>/src/gate-lite/vectors
+=== [2026-09-24T00:51:56Z] python -m unittest discover -s tests -v (summary)
+----------------------------------------------------------------------
+Ran 86 tests in 18.965s
+
+OK
+
+=== [2026-09-24T00:52:26Z] export WM_GATELITE_RUNNER=~/.local/bin/mandala-sandbox
+=== tenant-add
+{"tenant_id":"dogfood","agents":["did:key:zOutsiderAgent1"]}
+=== pass
+{"pass_id":"pass-3c10e8e76159","slot_id":"slot-716aefb3ed42","expires_at":"2026-09-24T01:22:27Z","quotas":{"cpu_ms":300000,"mem_mb":1024,"disk_mb":512,"wall_ms":1800000}}
+=== exec (real runner)
+{"exit":0,"stdout_hash":"sha256:70f56b165788f44bafc9484bd779004ab3d8c5d1cea0e9417f7c7a61ee7dcbcc","receipt_ids":["urn:uuid:01a0d0e6-4776-7db2-a4e0-a4b960a3b8cd","urn:uuid:01a0d0e6-47ba-773a-9e7b-f7eb3041090d"]}
+=== settle
+{"slot_id":null,"body":{"amount":{"minor":0,"currency":"USD"}}}
+=== terminate
+{"slot_id":"slot-716aefb3ed42","task_id":"urn:uuid:01a0d0e6-457e-7d76-8599-b6e70339d7a8","state":null}
+=== receipt --verdict
+{"verdict":"TRUSTED","errors":[],"summary":{"receipts":6,"types":["session.pass.created","task.decision","task.execution","delivery.attestation","settlement","task.termination"],"issuers":["did:key:z6MknNNHBkyPnYVMjqa6XDuN63YWD19fnBJiq7GKxSSgSC9p"],"terminated":true,"settled":true,"attestations":[{"receipt_id":"urn:uuid:01a0d0e6-48e7-7cac-b7ec-25f408c0dffe","counterparty":"did:key:z6MknNNHBkyPnYVMjqa6XDuN63YWD19fnBJiq7GKxSSgSC9p","attestation":"absent"}]}}
+
+=== [2026-09-24T00:52:41Z] offline verify: python -m continuity_receipt.verify state/receipts/urn:uuid:01a0d0e6-457e-7d76-8599-b6e70339d7a8.json
+<frozen runpy>:128: RuntimeWarning: 'continuity_receipt.verify' found in sys.modules after import of package 'continuity_receipt', but prior to execution of 'continuity_receipt.verify'; this may result in unpredictable behaviour
+{
+  "verdict": "TRUSTED",
+  "errors": [],
+  "provisional_reasons": [],
+  "insufficient_reasons": [],
+  "summary": {
+    "receipts": 6,
+    "types": [
+      "session.pass.created",
+      "task.decision",
+      "task.execution",
+      "delivery.attestation",
+      "settlement",
+      "task.termination"
+    ],
+    "issuers": [
+      "did:key:z6MknNNHBkyPnYVMjqa6XDuN63YWD19fnBJiq7GKxSSgSC9p"
+    ],
+    "terminated": true,
+    "settled": true,
+    "attestations": [
+      {
+        "receipt_id": "urn:uuid:01a0d0e6-48e7-7cac-b7ec-25f408c0dffe",
+        "counterparty": "did:key:z6MknNNHBkyPnYVMjqa6XDuN63YWD19fnBJiq7GKxSSgSC9p",
+        "attestation": "absent"
+      }
+    ]
+  }
+}
+exit_code=0
+=== sandbox_class in bundle:
+bwrap-landlock
+=== standalone vector verify:
+<frozen runpy>:128: RuntimeWarning: 'continuity_receipt.verify' found in sys.modules after import of package 'continuity_receipt', but prior to execution of 'continuity_receipt.verify'; this may result in unpredictable behaviour
+{
+  "verdict": "TRUSTED",
+  "errors": [],
+  "provisional_reasons": [],
+  "insufficient_reasons": [],
+  "summary": {
+    "receipts": 6,
+    "types": [
+      "session.pass.created",
+      "task.decision",
+      "task.execution",
+      "delivery.attestation",
+      "settlement",
+      "task.termination"
+    ],
+    "issuers": [
+      "did:key:z6MkwSG2hFkD41K85fvQFtNGCZXYFUwEZDqrzahZvWHt5hm1"
+    ],
+    "terminated": true,
+    "settled": true,
+    "attestations": [
+      {
+        "receipt_id": "urn:uuid:01a0d0e5-ce2f-7c63-93ad-7f20e7de57bd",
+        "counterparty": "did:key:z6MkiqMhLhuq26ofXDsP6WeDPTm74a27qdqjKSmNvEmnJjSb",
+        "attestation": "absent"
+      }
+    ]
+  }
+}
+exit_code=0
+=== console scripts:
+continuity-receipt-anchor
+continuity-receipt-disclose
+continuity-receipt-verify
+continuity-receipt-verify-receipt
+=== [2026-09-24T00:52:57Z] console verify: continuity-receipt-verify state/receipts/urn:uuid:01a0d0e6-457e-7d76-8599-b6e70339d7a8.json
+{"verdict":"TRUSTED","errors":[],"receipts":6}
+exit_code=0

@@ -1,13 +1,13 @@
 [project]
 name = "gate-lite"
 version = "0.0.1"
-description = "Gate-lite P0 slice: governed passes + Continuity Receipts (continuity-receipt/0.1)"
+description = "Gate-lite P0 slice: governed passes + Continuity Receipts (continuity-receipt/0.3)"
 requires-python = ">=3.11"
-dependencies = ["cryptography>=42"]
+dependencies = ["cryptography>=42", "continuity-receipt>=0.3.1"]
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["continuity_receipt", "gate_lite"]
+packages = ["gate_lite"]

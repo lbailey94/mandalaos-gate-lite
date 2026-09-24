@@ -3,7 +3,7 @@
 - Profile: **standard** · recorded 2026-09-18T02:52:38Z
 - Host: Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz · 8 threads · 15867 MB RAM · kernel 7.0.0-31-generic
 - Python 3.12.3 · bubblewrap 0.9.0 · systemd 255 (255.4-1ubuntu8.17)
-- Runner: `/home/lucas/.local/bin/mandala-sandbox` · load avg at start [5.0927734375, 7.0595703125, 6.16015625]
+- Runner: `~/.local/bin/mandala-sandbox` · load avg at start [5.0927734375, 7.0595703125, 6.16015625]
 
 Method: warmup, auto-calibrated n against a per-case time budget; latency
 percentiles are over per-operation samples. Percentiles on low-n latency

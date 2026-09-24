@@ -2,6 +2,7 @@
 import json
 import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
@@ -102,6 +103,31 @@ class TestRegistry(unittest.TestCase):
             self.assertEqual(set(data), {"tenants", "slots", "passes", "snapshots", "idempotency"})
             self.assertEqual(data["slots"]["slot-1"]["tenant_id"], "t1")
             self.assertEqual(data["idempotency"]["k"], {"n": 1})
+
+    def test_consume_jti_is_atomic_and_durable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "registry.db"
+            registry = Registry(path)
+            workers = 8
+            barrier = threading.Barrier(workers)
+            results: list[bool] = []
+
+            def consume():
+                barrier.wait()
+                results.append(registry.consume_jti("jti-1", "slot-1"))
+
+            threads = [threading.Thread(target=consume) for _ in range(workers)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join(15)
+
+            self.assertEqual(sum(results), 1, results)
+            self.assertTrue(registry.jti_consumed("jti-1"))
+            self.assertTrue(Registry(path).jti_consumed("jti-1"), "must survive reopen")
+            registry.release_jti("jti-1")
+            self.assertFalse(registry.jti_consumed("jti-1"))
+            self.assertTrue(registry.consume_jti("jti-1"), "released jti is consumable again")
 
 
 if __name__ == "__main__":

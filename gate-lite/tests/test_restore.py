@@ -33,7 +33,7 @@ class TestRestore(unittest.TestCase):
             (workspace / "nested" / "note.txt").write_text("nested", encoding="utf-8")
             before = tree_hash(workspace)
 
-            orch.exec_("dogfood", issued["slot_id"], "echo seed")
+            orch.exec_("dogfood", issued["slot_id"], "echo seed", token=issued["token"])
             snap = orch.snapshot("dogfood", issued["slot_id"])
             orch.terminate("dogfood", issued["slot_id"], reason="destroyed")
 
@@ -44,7 +44,9 @@ class TestRestore(unittest.TestCase):
             self.assertEqual((restored_ws / "artifact.txt").read_text(encoding="utf-8"), "restore payload")
             self.assertEqual((restored_ws / "nested" / "note.txt").read_text(encoding="utf-8"), "nested")
 
-            executed = orch.exec_("dogfood", recreated["slot_id"], "echo restored")
+            executed = orch.exec_(
+                "dogfood", recreated["slot_id"], "echo restored", token=recreated["token"]
+            )
             self.assertEqual(executed["exit"], 0)
             terminated = orch.terminate("dogfood", recreated["slot_id"])
             bundle = orch.receipt(terminated["task_id"])
@@ -114,7 +116,7 @@ class TestExpirySweep(unittest.TestCase):
             issued = orch.pass_("dogfood", agent, minutes=1)
             self._force_expiry(orch, issued["slot_id"])
             with self.assertRaises(ValueError) as ctx:
-                orch.exec_("dogfood", issued["slot_id"], "echo late")
+                orch.exec_("dogfood", issued["slot_id"], "echo late", token=issued["token"])
             self.assertIn("expired", str(ctx.exception))
             bundle = orch.receipt(orch.task_id_for(issued["slot_id"]))
             self.assertEqual(bundle["receipts"][-1]["type"], "task.termination")
