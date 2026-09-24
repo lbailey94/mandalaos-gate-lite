@@ -266,6 +266,11 @@ class TestQuotaKill(unittest.TestCase):
         slot["quotas"].update(quotas)
         orch.registry.put_slot(slot)
 
+    @unittest.skipUnless(
+        os.environ.get("GATE_LITE_QUOTA_TESTS") == "1",
+        "intentionally trips the kernel OOM killer (host notification noise); "
+        "set GATE_LITE_QUOTA_TESTS=1 to run",
+    )
     def test_memory_overrun_kills_slot(self):
         with tempfile.TemporaryDirectory() as tmp:
             orch, _agent, issued = self.make_slice_orchestrator(Path(tmp))

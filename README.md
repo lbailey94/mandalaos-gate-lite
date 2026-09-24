@@ -6,17 +6,18 @@ system.
 
 ## 0. Provenance of this revision
 
-- **Tested code pin:** `ac078e2` (gate-lite code; 86/86 tests green on a clean
-  export — see `gate-lite/evidence/outsider-2026-09-24/REPORT.md`).
-- **Documentation/evidence revisions after the pin:** `e7d40f5` (exercise
-  protocol), `a4553b0` (README friction fixes), `9fb406c` (evidence + claim
-  boundary), `c42320d` (contract layout). No gate-lite code changed after the
-  pin.
+- **Current tested code pin:** private `mandala-os` `033e5ce` (86 tests green
+  on a clean export; real-runner 0.4 bundle TRUSTED). See
+  `gate-lite/evidence/outsider-2026-09-24-04/REPORT.md`. The public snapshot
+  adds documentation and captured evidence after that tested code pin.
+- **Historical tested code pin:** `ac078e2`, exercised with receipt spec 0.3.
+  Its evidence remains under `gate-lite/evidence/outsider-2026-09-24/` and
+  must retain that version label.
 - **Claim boundary:** the outsider exercise was a **same-host clean-export
   reproduction by a collaborator with a pre-existing runner — not an
   unassisted stranger install**. A genuinely new tester on another machine
   remains a separate gate; this snapshot must not be read as that.
-- The receipt format's current published revision is `continuity-receipt/0.3`
+- The receipt format's current published revision is `continuity-receipt/0.4`
   (spec repo: github.com/lbailey94/continuity-receipt; also on PyPI). This
   snapshot **does not vendor the verifier** — it installs the published
   package as a dependency.
@@ -30,7 +31,7 @@ task arc:
 
 decision → authority → execution → delivery → termination → settlement
 
-Receipts are Ed25519-signed hash-chained records (`continuity-receipt/0.3`)
+Receipts are Ed25519-signed hash-chained records (`continuity-receipt/0.4`)
 checked by the published reference verifier. Operations: pass, exec, settle,
 terminate, kill, snapshot, restore, sweep. Control surfaces: a `mandala-ctl`
 CLI and an MCP server (stdio + loopback HTTP/SSE).
@@ -44,8 +45,8 @@ CLI and an MCP server (stdio + loopback HTTP/SSE).
 | Test suite | **86 tests green** (`unittest`, clean export) |
 | Authorization | tenant membership at issuance; required single-use token at exec; durable atomic replay (restart + concurrent requests); idempotency cache is authorization-first and tenant/slot scoped |
 | Stub safety | exec and the MCP server refuse without a real runner unless `--demo`; `mandala.status` reports the effective runner |
-| Outsider exercise | PASS 2026-09-24 against pin `ac078e2` (clean export, real runner, bundle TRUSTED offline) — same-host reproduction, see §0 |
-| Receipts | spec `0.3` via the published PyPI implementation (no vendored copy); 0.4 hardening in flight upstream |
+| Outsider exercise | PASS 2026-09-24 against 0.4 pin `033e5ce` (clean export, real runner, bundle TRUSTED offline); earlier 0.3 run retained — both same-host reproductions, see §0 |
+| Receipts | spec `0.4` via published PyPI `continuity-receipt 0.4.0` in the captured run (no vendored copy) |
 | Dogfood | 33/33 checks on the real bwrap runner + systemd slices (2026-09-18 evidence) |
 | Benchmark | 14/14 invariants, pre- and post-SQLite registry fix (2026-09-18 evidence) |
 | Containment class | **shared-kernel** (bwrap/Landlock); described as such everywhere |
@@ -56,6 +57,8 @@ Evidence summaries, both benchmark reports, and the outsider exercise report
 (with its friction log) are under `gate-lite/evidence/`; the working state and
 known deviations are in `gate-lite/HANDOFF_2026-09-18.md` §9–§11 and
 `design/GATE_LITE_ORCHESTRATOR_CONTRACT_2026-09-17.md` §14.
+For a new project integration, start with
+`gate-lite/INTEGRATION_CONTRACT.md`.
 
 ## 3. What is not here yet, and why
 
@@ -70,8 +73,8 @@ known deviations are in `gate-lite/HANDOFF_2026-09-18.md` §9–§11 and
   The issuance step is not wired into gate-lite, and proof verification lives
   in the spec repo. Policy: the public spec repo's `ANCHORING.md`.
 - **Slice/systemd mode and MCP transports** are covered by the test suite and
-  the 2026-09-18 dogfood/benchmark evidence, but were not part of the
-  2026-09-24 outsider exercise (real runner only, by design).
+  the 2026-09-18 dogfood/benchmark evidence, but were not part of either
+  2026-09-24 clean-export exercise (real runner only, by design).
 
 ## 4. How to run
 
@@ -84,6 +87,8 @@ cd gate-lite
 ../.venv/bin/python -m unittest discover -s tests -v
 ../.venv/bin/continuity-receipt-verify vectors/02_happy_full.json
 # verify the captured outsider bundle offline
+../.venv/bin/continuity-receipt-verify evidence/outsider-2026-09-24-04/bundle-task.json
+# historical spec 0.3 exercise, verified with a compatible verifier
 ../.venv/bin/continuity-receipt-verify evidence/outsider-2026-09-24/bundle-task-*.json
 ```
 
@@ -98,7 +103,7 @@ CLI/MCP usage and `GATE_LITE_OUTSIDER_EXERCISE.md` for the exercise protocol.
 - **continuity-receipt** — the receipt format and reference verifier are
   published separately at github.com/lbailey94/continuity-receipt (Apache-2.0;
   also on PyPI). The format's current published revision is
-  `continuity-receipt/0.3` (backward compatible with 0.1/0.2). This snapshot
+  `continuity-receipt/0.4` (reference verifier supports 0.1–0.4). This snapshot
   installs the package from PyPI and does not vendor it.
 - **WhiteMagic** — the governance/memory core:
   github.com/lbailey94/whitemagic (MIT).
