@@ -16,9 +16,23 @@ from gate_lite.orchestrator import EmitterError, Orchestrator, build_runner  # n
 def build_orchestrator(args) -> Orchestrator:
     runner_path = args.runner or os.environ.get("WM_GATELITE_RUNNER")
     slice_mode = args.slice or os.environ.get("WM_GATELITE_SLICE") == "1"
-    return Orchestrator(
-        args.state, gate_id=args.gate_id, runner=build_runner(runner_path, slice_mode)
-    )
+    if slice_mode and not runner_path:
+        raise SystemExit(
+            "--slice/WM_GATELITE_SLICE requires a runner path: pass --runner <path> "
+            "or set WM_GATELITE_RUNNER"
+        )
+    runner = build_runner(runner_path, slice_mode)
+    if runner is None and args.cmd == "exec" and not args.demo:
+        raise SystemExit(
+            "refusing to exec: no sandbox runner configured (pass --runner <path> "
+            "[--slice], or set WM_GATELITE_RUNNER), or pass --demo to run the simulated stub"
+        )
+    if runner is None and args.cmd == "exec":
+        print(
+            "mandala-ctl: warning: simulated execution (stub runner); no sandbox involved",
+            file=sys.stderr,
+        )
+    return Orchestrator(args.state, gate_id=args.gate_id, runner=runner)
 
 
 def main(argv=None) -> int:
@@ -30,6 +44,11 @@ def main(argv=None) -> int:
         "--slice",
         action="store_true",
         help="run payloads under a systemd user slice with cgroup quotas (G2)",
+    )
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="allow exec with the built-in stub runner (simulated execution, no sandbox)",
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -49,6 +68,11 @@ def main(argv=None) -> int:
     exec_cmd.add_argument("--tenant", required=True)
     exec_cmd.add_argument("--slot", required=True)
     exec_cmd.add_argument("--payload-ref", required=True)
+    exec_cmd.add_argument(
+        "--token",
+        required=True,
+        help="pass token from `pass` (required; binds agent + slot, single use)",
+    )
     exec_cmd.add_argument("--idempotency-key", default=None)
 
     settle = sub.add_parser("settle")
@@ -110,7 +134,11 @@ def main(argv=None) -> int:
             )
         elif args.cmd == "exec":
             output = orch.exec_(
-                args.tenant, args.slot, args.payload_ref, idempotency_key=args.idempotency_key
+                args.tenant,
+                args.slot,
+                args.payload_ref,
+                idempotency_key=args.idempotency_key,
+                token=args.token,
             )
         elif args.cmd == "settle":
             output = orch.settle(args.tenant, args.slot, args.rail, args.rail_ref, args.minor)

@@ -19,6 +19,7 @@ file is left in place, untouched, as a frozen record.
 import json
 import sqlite3
 import threading
+import time
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -57,6 +58,11 @@ CREATE INDEX IF NOT EXISTS snapshots_tenant_idx ON snapshots(tenant_id);
 CREATE TABLE IF NOT EXISTS idempotency (
     key TEXT PRIMARY KEY,
     json TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS consumed_tokens (
+    jti TEXT PRIMARY KEY,
+    slot_id TEXT,
+    consumed_at INTEGER
 );
 """
 
@@ -275,6 +281,35 @@ class Registry:
         with self._connection() as conn:
             row = conn.execute("SELECT json FROM idempotency WHERE key = ?", (key,)).fetchone()
         return json.loads(row["json"]) if row else None
+
+    # -- pass-token replay (durable, atomic) --------------------------------
+    def consume_jti(self, jti: str, slot_id: str | None = None) -> bool:
+        """Atomically consume a pass-token jti; False when already consumed.
+
+        `INSERT OR IGNORE` on the jti primary key makes check-and-consume a
+        single statement: concurrent requests (threads or processes) can race
+        here and exactly one wins. Durable by construction, so replay state
+        survives restarts.
+        """
+        with self._connection() as conn:
+            cursor = conn.execute(
+                "INSERT OR IGNORE INTO consumed_tokens(jti, slot_id, consumed_at) "
+                "VALUES(?, ?, ?)",
+                (jti, slot_id, int(time.time())),
+            )
+            return cursor.rowcount == 1
+
+    def release_jti(self, jti: str) -> None:
+        """Release a jti whose attempt failed before any work started."""
+        with self._connection() as conn:
+            conn.execute("DELETE FROM consumed_tokens WHERE jti = ?", (jti,))
+
+    def jti_consumed(self, jti: str) -> bool:
+        with self._connection() as conn:
+            row = conn.execute(
+                "SELECT 1 FROM consumed_tokens WHERE jti = ?", (jti,)
+            ).fetchone()
+            return row is not None
 
     def reload(self) -> dict:
         """Return the full registry in the legacy dict-of-dicts shape.

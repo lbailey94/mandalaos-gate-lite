@@ -15,7 +15,6 @@ import json
 import os
 import sys
 import threading
-import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -26,7 +25,12 @@ if str(ROOT) not in sys.path:
 
 from continuity_receipt import verify_bundle  # noqa: E402
 from gate_lite.models import SLOT_CLASSES  # noqa: E402
-from gate_lite.orchestrator import EmitterError, Orchestrator, build_runner  # noqa: E402
+from gate_lite.orchestrator import (  # noqa: E402
+    EmitterError,
+    Orchestrator,
+    PassError,
+    build_runner,
+)
 from gate_lite.tokens import verify_pass  # noqa: E402
 
 PROTOCOL_VERSION = "2025-06-18"
@@ -54,11 +58,28 @@ TOOLS = [
         },
     },
     {
+        "name": "mandala.pass.verify",
+        "description": (
+            "Verify a pass token offline (Ed25519 did:key + claims) and return "
+            "its claims plus local registry state: pass record, gate policy "
+            "version, and whether the jti was already used on this gate."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "token": {"type": "string", "description": "compact JWS pass token"},
+            },
+            "required": ["token"],
+        },
+    },
+    {
         "name": "mandala.exec",
         "description": (
             "Execute a payload inside a pass slot. Emits decision + execution "
             "receipts; returns exit code, stdout hash, and receipt ids. Payload "
-            "is a command or a declared-execution envelope with default-deny egress."
+            "is a command or a declared-execution envelope with default-deny egress. "
+            "Requires the pass token from `mandala.pass` (single use, bound to "
+            "agent + slot)."
         ),
         "inputSchema": {
             "type": "object",
@@ -66,10 +87,13 @@ TOOLS = [
                 "agent": {"type": "string"},
                 "slot": {"type": "string"},
                 "payload_ref": {"type": "string"},
-                "token": {"type": "string", "description": "pass token (optional in v0 dogfood)"},
+                "token": {
+                    "type": "string",
+                    "description": "pass token from mandala.pass (required; single use)",
+                },
                 "idempotency_key": {"type": "string"},
             },
-            "required": ["agent", "slot", "payload_ref"],
+            "required": ["agent", "slot", "payload_ref", "token"],
         },
     },
     {
@@ -248,20 +272,31 @@ class McpServer:
                         idempotency_key=args.get("idempotency_key"),
                     )
                 )
+            if name == "mandala.pass.verify":
+                token = args["token"]
+                claims = verify_pass(token, self.orch.gate_did)
+                pass_id = claims.get("pass_id")
+                record = self.orch.registry.get_pass(pass_id) if pass_id else None
+                jti = claims.get("jti")
+                return _result(
+                    {
+                        "valid": True,
+                        "claims": claims,
+                        "pass": record,
+                        "jti_seen": bool(jti and self.orch.registry.jti_consumed(jti)),
+                        "gate_id": self.orch.gate_id,
+                        "policy_version": self.orch.policy_version,
+                    }
+                )
             if name == "mandala.exec":
-                token = args.get("token")
-                if token:
-                    claims = verify_pass(token, self.orch.gate_did)
-                    if claims.get("sub") != args.get("agent"):
-                        return _tool_error("token_subject_mismatch", "token is bound to another agent")
-                    if int(claims.get("exp", 0)) < time.time():
-                        return _tool_error("pass_expired", "pass token expired")
                 return _result(
                     self.orch.exec_(
                         self.tenant_id,
                         args["slot"],
                         args["payload_ref"],
                         idempotency_key=args.get("idempotency_key"),
+                        token=args.get("token"),
+                        agent_id=args.get("agent"),
                     )
                 )
             if name == "mandala.settle":
@@ -309,6 +344,8 @@ class McpServer:
             return _tool_error("unknown_tool", f"no such tool: {name}")
         except EmitterError as exc:
             return _tool_error("emitter_unavailable", str(exc))
+        except PassError as exc:
+            return _tool_error(exc.code, str(exc))
         except KeyError as exc:
             return _tool_error("not_found", str(exc))
         except PermissionError as exc:
@@ -456,6 +493,11 @@ def main(argv=None) -> int:
     parser.add_argument("--gate-id", default="gate-lite-1")
     parser.add_argument("--runner", default=None)
     parser.add_argument("--slice", action="store_true", help="systemd slice quotas (G2)")
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="allow startup without a sandbox runner (simulated execution via stub)",
+    )
     parser.add_argument("--transport", choices=("stdio", "http"), default="stdio")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
@@ -464,7 +506,17 @@ def main(argv=None) -> int:
 
     runner_path = args.runner or os.environ.get("WM_GATELITE_RUNNER")
     slice_mode = args.slice or os.environ.get("WM_GATELITE_SLICE") == "1"
+    if slice_mode and not runner_path:
+        parser.error(
+            "--slice/WM_GATELITE_SLICE requires a runner path: pass --runner <path> "
+            "or set WM_GATELITE_RUNNER"
+        )
     runner = build_runner(runner_path, slice_mode)
+    if runner is None and not args.demo:
+        parser.error(
+            "refusing to start: no sandbox runner configured (pass --runner <path> "
+            "[--slice], or set WM_GATELITE_RUNNER), or pass --demo to expose simulated execution"
+        )
     orchestrator = Orchestrator(args.state, gate_id=args.gate_id, runner=runner)
     server = McpServer(orchestrator, args.tenant)
 

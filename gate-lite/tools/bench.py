@@ -148,6 +148,30 @@ def make_orchestrator(state: Path, runner=None) -> Orchestrator:
     return orch
 
 
+def pass_buffer(orch: Orchestrator, tenant: str, agent: str, size: int = 256, **kwargs):
+    """Draw single-use (slot, token) passes for benchmark loops.
+
+    Pass tokens are single-use since the authorization contract, so loops
+    that exec repeatedly draw a pre-issued pass. The buffer is filled eagerly
+    (outside the measured samples) and refilled lazily if a loop outruns it.
+    """
+    buffer: list[tuple[str, str]] = []
+
+    def refill() -> None:
+        while len(buffer) < size:
+            issued = orch.pass_(tenant, agent, **kwargs)
+            buffer.append((issued["slot_id"], issued["token"]))
+
+    refill()
+
+    def draw() -> tuple[str, str]:
+        if not buffer:
+            refill()
+        return buffer.pop()
+
+    return draw
+
+
 def decision_body(index: int) -> dict:
     return {
         "action": "mandala.exec",
@@ -441,7 +465,7 @@ def bench_orchestrator(b: Bench) -> None:
 
     def full_flow():
         issued = orch.pass_("bench", AGENT_DID, minutes=5)
-        orch.exec_("bench", issued["slot_id"], "echo bench")
+        orch.exec_("bench", issued["slot_id"], "echo bench", token=issued["token"])
         orch.settle("bench", issued["slot_id"], "invoice", "bench-inv", 0)
         orch.terminate("bench", issued["slot_id"])
 
@@ -451,7 +475,7 @@ def bench_orchestrator(b: Bench) -> None:
     def flow_verified():
         nonlocal last_task
         issued = orch.pass_("bench", AGENT_DID, minutes=5)
-        orch.exec_("bench", issued["slot_id"], "echo bench")
+        orch.exec_("bench", issued["slot_id"], "echo bench", token=issued["token"])
         terminated = orch.terminate("bench", issued["slot_id"])
         last_task = terminated["task_id"]
 
@@ -463,8 +487,8 @@ def bench_orchestrator(b: Bench) -> None:
     def idempotent_replay():
         first = orch.pass_("bench", AGENT_DID, idempotency_key="bench-p1")
         orch.pass_("bench", AGENT_DID, idempotency_key="bench-p1")
-        orch.exec_("bench", first["slot_id"], "echo idem", idempotency_key="bench-e1")
-        orch.exec_("bench", first["slot_id"], "echo idem", idempotency_key="bench-e1")
+        orch.exec_("bench", first["slot_id"], "echo idem", idempotency_key="bench-e1", token=first["token"])
+        orch.exec_("bench", first["slot_id"], "echo idem", idempotency_key="bench-e1", token=first["token"])
 
     b.measure("C", "idempotent replay (pass+exec)", "ms/op", idempotent_replay, min_iters=10)
 
@@ -564,19 +588,24 @@ def bench_runner(b: Bench) -> None:
 
     state = b.state_dir("runner-sandbox")
     orch = make_orchestrator(state, runner=SandboxRunner(WRAPPER))
-    issued = orch.pass_("bench", AGENT_DID, minutes=5)
+    draw_sandbox = pass_buffer(orch, "bench", AGENT_DID, minutes=5)
 
     def sandbox_exec():
-        orch.exec_("bench", issued["slot_id"], "echo bench")
+        slot_id, token = draw_sandbox()
+        orch.exec_("bench", slot_id, "echo bench", token=token)
 
     b.measure("D", "gate exec via SandboxRunner (echo)", "ms/op", sandbox_exec, min_iters=10)
 
     if HAS_SYSTEMD:
         slice_state = b.state_dir("runner-slice")
         slice_orch = make_orchestrator(slice_state, runner=SliceRunner(WRAPPER))
-        slice_issued = slice_orch.pass_("bench", AGENT_DID, minutes=5)
-        b.measure("D", "gate exec via SliceRunner (echo)", "ms/op",
-                  lambda: slice_orch.exec_("bench", slice_issued["slot_id"], "echo bench"), min_iters=10)
+        draw_slice = pass_buffer(slice_orch, "bench", AGENT_DID, minutes=5)
+
+        def slice_exec():
+            slot_id, token = draw_slice()
+            slice_orch.exec_("bench", slot_id, "echo bench", token=token)
+
+        b.measure("D", "gate exec via SliceRunner (echo)", "ms/op", slice_exec, min_iters=10)
 
         kill_state = b.state_dir("kill-latency")
         kill_orch = make_orchestrator(kill_state, runner=SandboxRunner(WRAPPER))
@@ -588,7 +617,9 @@ def bench_runner(b: Bench) -> None:
 
             def run_exec():
                 try:
-                    outcome.update(kill_orch.exec_("bench", kill_issued["slot_id"], "sleep 30"))
+                    outcome.update(
+                        kill_orch.exec_("bench", kill_issued["slot_id"], "sleep 30", token=kill_issued["token"])
+                    )
                 except Exception as exc:  # noqa: BLE001
                     failure["exc"] = exc
 
@@ -621,7 +652,7 @@ def bench_runner(b: Bench) -> None:
                 oom_orch.registry.put_slot(slot)
                 payload_ref = json.dumps({"program": "python3", "args": ["-c", "x=bytearray(512*1024*1024)"]})
                 started = time.perf_counter()
-                executed = oom_orch.exec_("bench", oom_issued["slot_id"], payload_ref)
+                executed = oom_orch.exec_("bench", oom_issued["slot_id"], payload_ref, token=oom_issued["token"])
                 oom_samples.append((time.perf_counter() - started) * 1000)
                 if executed.get("kill_signal") != "quota":
                     oom_samples.pop()
@@ -635,11 +666,12 @@ def bench_runner(b: Bench) -> None:
 
     egress_state = b.state_dir("egress-deny")
     egress_orch = make_orchestrator(egress_state, runner=SandboxRunner(WRAPPER))
-    egress_issued = egress_orch.pass_("bench", AGENT_DID, minutes=2)
+    draw_egress = pass_buffer(egress_orch, "bench", AGENT_DID, minutes=2)
     curl_ref = json.dumps({"program": "curl", "args": ["-sS", "-m", "5", "https://example.com"], "net": True, "egress": []})
 
     def denied_curl():
-        executed = egress_orch.exec_("bench", egress_issued["slot_id"], curl_ref)
+        slot_id, token = draw_egress()
+        executed = egress_orch.exec_("bench", slot_id, curl_ref, token=token)
         if executed["exit"] == 0:
             raise RuntimeError("egress was not denied")
 
@@ -787,7 +819,7 @@ def bench_soak(b: Bench) -> None:
     for _ in range(b.cfg["soak_flows"]):
         started = time.perf_counter()
         issued = orch.pass_("bench", AGENT_DID, minutes=5)
-        orch.exec_("bench", issued["slot_id"], "echo soak")
+        orch.exec_("bench", issued["slot_id"], "echo soak", token=issued["token"])
         terminated = orch.terminate("bench", issued["slot_id"])
         last_task = terminated["task_id"]
         samples.append((time.perf_counter() - started) * 1000)

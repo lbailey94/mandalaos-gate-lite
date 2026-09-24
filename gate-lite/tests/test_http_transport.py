@@ -91,10 +91,12 @@ class TestHttpTransport(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         tools = json.loads(body)["result"]["tools"]
-        self.assertEqual(len(tools), 13)
+        # Surface count follows TOOLS; mandala.pass.verify joined in S2b.
+        self.assertEqual(len(tools), 14)
         names = {tool["name"] for tool in tools}
         self.assertIn("mandala.kill", names)
         self.assertIn("mandala.restore", names)
+        self.assertIn("mandala.pass.verify", names)
 
     def test_sse_response_mode(self):
         status, headers, body = self.initialize(accept="text/event-stream")
@@ -127,7 +129,7 @@ class TestHttpTransport(unittest.TestCase):
             return payload(json.loads(body))
 
         passed = call(2, "mandala.pass", {"agent": self.agent_did, "minutes": 30, "spend_minor": 1000})
-        executed = call(3, "mandala.exec", {"agent": self.agent_did, "slot": passed["slot_id"], "payload_ref": "echo http"})
+        executed = call(3, "mandala.exec", {"agent": self.agent_did, "slot": passed["slot_id"], "payload_ref": "echo http", "token": passed["token"]})
         self.assertEqual(executed["exit"], 0)
         call(4, "mandala.settle", {"slot": passed["slot_id"], "rail_ref": "inv-http", "minor": 200})
         terminated = call(5, "mandala.terminate", {"slot": passed["slot_id"]})
@@ -187,6 +189,7 @@ class TestHttpSubprocess(unittest.TestCase):
                     str(state),
                     "--tenant",
                     "dogfood",
+                    "--demo",
                     "--transport",
                     "http",
                     "--port",

@@ -69,7 +69,7 @@ discoverability copy.
 | `mandala.pass` | `minutes*`, `class*`, `tenant`, `budget_minor?`, `region?` | `{pass_id, endpoint, token, quotas, expires_at, receipt_id}` | the buyer entry point |
 | `mandala.create` | `tenant*`, `template*`, `ttl_s*` | `{slot_id, state, receipt_id}` | slot allocation |
 | `mandala.status` | `slot_id*` | `{state, quotas, usage, leases, last_receipt}` | read-only |
-| `mandala.exec` | `slot_id*`, `payload_ref*` | `{exit, stdout_hash, artifacts[], receipt_ids[]}` | runner-mediated; egress default-deny |
+| `mandala.exec` | `slot_id*`, `payload_ref*`, `token*` | `{exit, stdout_hash, artifacts[], receipt_ids[]}` | runner-mediated; egress default-deny; token bound to agent + slot, single use (2026-09-24) |
 | `mandala.kill` | `slot_id*`, `signal?`, `wait_s?` | `{state, kill_signal, receipt_id, exec_active}` | operator kill switch (SIGTERM→SIGKILL, latency recorded) |
 | `mandala.snapshot` | `slot_id*` | `{snapshot_id, receipt_id, artifact, tree_hash}` | freeze for resume (gate-lite: filesystem workspace tar + `delivery.attestation`) |
 | `mandala.restore` | `slot_id*`, `snapshot_id*` | `{snapshot_id, restored_hash, receipt_id}` | materialize into a `placed` slot (G7); safe extract + `delivery.attestation` |
@@ -176,8 +176,10 @@ arbitration, no cross-gate placement, no GPU.
 ## 14. Implementation notes and deviations (v0, 2026-09-17)
 
 **Location:** `MANDALA_OS/gate-lite/` — Python 3.11+, `cryptography` (Ed25519).
-Layout: `continuity_receipt/` (library + verifier), `gate_lite/`
-(orchestrator + `ctl.py` CLI), `tools/make_vectors.py`, `tests/`, `vectors/`.
+Layout: `gate_lite/` (orchestrator + `ctl.py` CLI + MCP server),
+`tools/make_vectors.py`, `tests/`, `vectors/`, `evidence/`. The receipt
+library + reference verifier is the published PyPI package
+`continuity-receipt` — not vendored (migration `77821a7`, 2026-09-23).
 
 **Realized:**
 - Lifecycle `pass_ → exec_ → settle → terminate` with per-transition receipts;
@@ -234,11 +236,12 @@ Layout: `continuity_receipt/` (library + verifier), `gate_lite/`
    above the pass spend cap before emission. Dogfood settles at $0.
 5. **MCP control surface** (§5): **wired 2026-09-17, extended 2026-09-18** —
    `gate_lite/mcp_server.py`, JSON-RPC 2.0, 11 tools
-   pass/exec/settle/terminate/**kill**/destroy/status/list/receipt/templates/
-   **snapshot**; `mandala.create` folded into `mandala.pass` for v0; token
-   subject + expiry checked on exec when a token is supplied; tool failures
-   return structured `isError` (`emitter_unavailable`, `not_found`,
-   `permission_denied`, `invalid`).
+    pass/exec/settle/terminate/**kill**/destroy/status/list/receipt/templates/
+    **snapshot**; `mandala.create` folded into `mandala.pass` for v0; token
+    subject + expiry checked on exec when a token is supplied (**superseded
+    2026-09-24 — the token is now required, see item 9**); tool failures
+    return structured `isError` (`emitter_unavailable`, `not_found`,
+    `permission_denied`, `invalid`).
 6. **Snapshot semantics (operator decision 2026-09-18):** filesystem snapshot
    only — the slot workspace (mounted writable at `/workspace` in the runner)
    is tarred to `<state>/snapshots/<slot>/<snapshot_id>.tar.gz` and attested
@@ -261,6 +264,15 @@ Layout: `continuity_receipt/` (library + verifier), `gate_lite/`
    `{"program", "args", "net", "egress"}`. `net: true` without declared
    destinations is treated as undeclared and denied (recorded as
    `destination: "undeclared"`).
+9. **Authorization contract (2026-09-24):** pass issuance enforces
+   `Tenant.agents` membership (`agent_not_registered`); `mandala.exec`
+   requires a pass token bound to the slot's pass and agent
+   (`token_required`, `token_invalid`, `pass_expired`,
+   `token_subject_mismatch`, `token_slot_mismatch`, `pass_replayed`); jti
+   replay is durable and atomic (`consumed_tokens` in the SQLite registry,
+   survives restarts and concurrent requests); attempts rejected before work
+   starts release the token. CLI `exec --token` and the MCP `token` field are
+   required; cross-tenant slot denial unchanged.
 
 **Acceptance status (2026-09-18):** G1 PASS (TRUSTED bundle), G2 PASS
 (memory + wall overrun kill the slot via systemd slice, `quota`), G3 PASS
@@ -277,3 +289,7 @@ idle/live G6, G3 ×2, G2 ×2, snapshot, workspace roundtrip), 8 HTTP
 transport, 5 selective-disclosure, 8 restore/expiry/key. Dogfood driver
 `tools/dogfood_run.py` reports 33/33 checks on the real runner; evidence in
 `gate-lite/evidence/2026-09-18/`.
+
+**Update 2026-09-24:** suite 79 tests green (authorization contract, stub
+safety, spec 0.3 emission via PyPI — no vendored copy); details in
+`HANDOFF_2026-09-18.md` §9–§10.

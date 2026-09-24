@@ -18,7 +18,7 @@ from continuity_receipt.canon import sha256_prefixed
 
 from .models import SLOT_CLASSES, Slot, Tenant, now_epoch
 from .registry import Registry
-from .tokens import issue_pass
+from .tokens import issue_pass, verify_pass
 
 POLICY_VERSION = "2026-09-17.1"
 GATE_CLASS = "gate-lite"
@@ -40,6 +40,16 @@ IDLE_SEALABLE_STATES = ("placed", "active", "frozen")
 
 class EmitterError(RuntimeError):
     """Receipt emitter unavailable — the gate fails closed (no unrecorded work)."""
+
+
+class PassError(PermissionError):
+    """Pass/token authorization failure. `code` is the stable machine code
+    (token_required, token_invalid, pass_expired, token_subject_mismatch,
+    token_slot_mismatch, pass_replayed, agent_not_registered)."""
+
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
 
 
 def rfc3339(epoch: int) -> str:
@@ -550,7 +560,9 @@ class Orchestrator:
             path = self.receipts_dir / f"{task_id}.json"
             if path.exists():
                 bundle = json.loads(path.read_text(encoding="utf-8"))
-                chain = TaskChain(task_id=task_id)
+                # Preserve the stored bundle's spec so resumed chains stay
+                # homogeneous (0.1-era bundles keep appending 0.1 receipts).
+                chain = TaskChain(task_id=task_id, spec=bundle.get("spec"))
                 chain.receipts = bundle.get("receipts", [])
                 self._chains[slot["slot_id"]] = chain
                 return chain
@@ -640,15 +652,35 @@ class Orchestrator:
         principal_id: str | None = None,
         idempotency_key: str | None = None,
     ) -> dict:
-        if idempotency_key:
-            cached = self.registry.recall(f"pass:{idempotency_key}")
-            if cached:
-                return cached
+        # Authorization precedes the idempotency cache: membership is checked
+        # before a cached pass (and its token) can be returned. Cache keys are
+        # tenant+agent scoped, and a key cannot be reused with different
+        # request parameters.
         tenant = self.registry.get_tenant(tenant_id)
         if tenant is None:
             raise KeyError(f"unknown tenant {tenant_id}")
+        if agent_did not in (tenant.get("agents") or []):
+            raise PassError(
+                "agent_not_registered",
+                f"agent {agent_did} is not registered to tenant {tenant_id}",
+            )
         if slot_class not in SLOT_CLASSES:
             raise ValueError(f"unknown slot class {slot_class}")
+        request = {
+            "minutes": minutes,
+            "slot_class": slot_class,
+            "spend_cap": spend_cap,
+            "principal_id": principal_id,
+        }
+        cache_key = (
+            f"pass:{tenant_id}:{agent_did}:{idempotency_key}" if idempotency_key else None
+        )
+        if cache_key:
+            cached = self.registry.recall(cache_key)
+            if cached is not None:
+                if cached.get("request") != request:
+                    raise ValueError("idempotency key reused with a different request")
+                return cached["result"]
 
         quotas = dict(SLOT_CLASSES[slot_class])
         quotas["wall_ms"] = minutes * 60000
@@ -657,6 +689,7 @@ class Orchestrator:
         slot_id = "slot-" + uuid.uuid4().hex[:12]
         pass_id = "pass-" + uuid.uuid4().hex[:12]
         jti = str(records.uuid7())
+        mandate_ref = sha256_prefixed(f"mandate:{pass_id}".encode())
 
         claims = {
             "iss": f"gate:{self.gate_id}",
@@ -667,7 +700,15 @@ class Orchestrator:
             "policy_version": self.policy_version,
             "exp": expires_at,
             "jti": jti,
+            # S2b binding claims (2026-09-22): pass/slot identity and the
+            # mandate reference, so a relying party can bind its own receipts
+            # to this pass without asking the gate (offline join key).
+            "pass_id": pass_id,
+            "slot_id": slot_id,
+            "mandate_ref": mandate_ref,
         }
+        if principal_id:
+            claims["principal_id"] = principal_id
         token = issue_pass(self.gate_did, self.gate_key, claims)
 
         body = {
@@ -676,8 +717,11 @@ class Orchestrator:
             "quotas": quotas,
             "expires_at": rfc3339(expires_at),
             "policy_version": self.policy_version,
-            "mandate_ref": sha256_prefixed(f"mandate:{pass_id}".encode()),
+            "mandate_ref": mandate_ref,
             "agent_id": agent_did,
+            # S2b: token commitment — the join key a relying party records in
+            # its own receipts (spec §4.1 `pass_token_id`).
+            "pass_token_id": sha256_prefixed(token.encode("ascii")),
         }
         if spend_cap:
             body["spend_cap"] = spend_cap
@@ -718,8 +762,8 @@ class Orchestrator:
             "expires_at": rfc3339(expires_at),
             "receipt_id": receipt["receipt_id"],
         }
-        if idempotency_key:
-            self.registry.remember(f"pass:{idempotency_key}", result)
+        if cache_key:
+            self.registry.remember(cache_key, {"request": request, "result": result})
         return result
 
     def _authorized_slot(self, tenant_id: str, slot_id: str) -> dict:
@@ -730,23 +774,74 @@ class Orchestrator:
             raise PermissionError("cross-tenant access denied")
         return slot
 
+    def _verify_exec_token(self, slot: dict, token: str | None, agent_id: str | None) -> dict:
+        """Verify the exec token and its bindings; returns the claims.
+
+        No side effects: consumption is a separate, explicit step
+        (`_consume_exec_jti`), so idempotent-replay hits can verify without
+        re-consuming and rejected attempts never burn a token.
+        """
+        if not token:
+            raise PassError(
+                "token_required",
+                "exec requires a pass token bound to this agent and slot",
+            )
+        try:
+            claims = verify_pass(token, self.gate_did)
+        except ValueError as exc:
+            raise PassError("token_invalid", str(exc)) from exc
+        if int(claims.get("exp", 0)) < now_epoch():
+            raise PassError("pass_expired", "pass token expired")
+        if agent_id and claims.get("sub") != agent_id:
+            raise PassError("token_subject_mismatch", "token is bound to another agent")
+        if claims.get("slot_id") != slot["slot_id"] or claims.get("pass_id") != slot.get("pass_id"):
+            raise PassError("token_slot_mismatch", "pass token is bound to another slot")
+        pass_record = self.registry.get_pass(slot.get("pass_id") or "")
+        if pass_record is None:
+            raise PassError("token_invalid", "pass record not found")
+        if pass_record.get("agent_id") != claims.get("sub"):
+            raise PassError("token_subject_mismatch", "token subject is not the pass agent")
+        if not claims.get("jti"):
+            raise PassError("token_invalid", "pass token has no jti")
+        return claims
+
+    def _consume_exec_jti(self, claims: dict, slot_id: str) -> str:
+        """Atomically consume the jti; durable replay rejection. Returns the jti."""
+        jti = claims["jti"]
+        if not self.registry.consume_jti(jti, slot_id):
+            raise PassError("pass_replayed", "pass token was already used")
+        return jti
+
     def exec_(
         self,
         tenant_id: str,
         slot_id: str,
         payload_ref: str,
         idempotency_key: str | None = None,
+        token: str | None = None,
+        agent_id: str | None = None,
     ) -> dict:
-        if idempotency_key:
-            cached = self.registry.recall(f"exec:{idempotency_key}")
-            if cached:
-                return cached
+        # Authorization precedes the idempotency cache on every path: a cached
+        # result is only returned to a caller that passes the tenant check and
+        # presents a valid token bound to this slot/pass/agent, and only for
+        # the original payload. Cache keys are tenant+slot scoped.
         slot = self._authorized_slot(tenant_id, slot_id)
+        claims = self._verify_exec_token(slot, token, agent_id)
+        cache_key = (
+            f"exec:{tenant_id}:{slot_id}:{idempotency_key}" if idempotency_key else None
+        )
+        if cache_key:
+            cached = self.registry.recall(cache_key)
+            if cached is not None:
+                if cached.get("request", {}).get("payload_ref") != payload_ref:
+                    raise ValueError("idempotency key reused with a different request")
+                return cached["result"]
         if self._expire_if_needed(slot):
             raise ValueError("slot is expired")
         if slot["state"] in BLOCKED_STATES:
             raise ValueError(f"slot is {slot['state']}")
         previous_state = slot["state"]
+        jti = self._consume_exec_jti(claims, slot_id)
 
         # Atomic start (issue #1): reserve the slot with a run generation
         # before any receipt or side effect, so a concurrent kill/expiry can
@@ -765,6 +860,8 @@ class Orchestrator:
             require=lambda s: s.get("expires_at", 0) > now_epoch(),
         )
         if started is None:
+            # No work ran; the token is not burned.
+            self.registry.release_jti(jti)
             fresh = self.registry.get_slot(slot_id) or slot
             raise ValueError(
                 f"start rejected: slot is {fresh['state']} — no process started"
@@ -790,10 +887,11 @@ class Orchestrator:
             )
         except EmitterError:
             # No receipt, no start: release the reservation so the slot is not
-            # wedged in `starting` (fail-closed but recoverable).
+            # wedged in `starting`, and release the token (no work ran).
             self.registry.cas_slot(
                 slot_id, (STARTING_STATE,), {"state": previous_state}
             )
+            self.registry.release_jti(jti)
             raise
 
         def on_spawn(pid: int, pgid: int, unit: str | None):
@@ -805,11 +903,12 @@ class Orchestrator:
             result = self.runner.run(run_slot, payload_ref, on_spawn=on_spawn)
         except Exception:
             # The runner failed before any process of record exists; release
-            # the reservation so the slot can be retried.
+            # the reservation so the slot can be retried, and the token with it.
             if self.active_run(slot_id) is None:
                 self.registry.cas_slot(
                     slot_id, (STARTING_STATE,), {"state": previous_state}
                 )
+                self.registry.release_jti(jti)
             raise
         self._last_exec[slot_id] = result
         self._run_path(slot_id).unlink(missing_ok=True)
@@ -890,8 +989,10 @@ class Orchestrator:
         else:
             self.registry.cas_slot(slot_id, (STARTING_STATE,), {"state": "active"})
 
-        if idempotency_key:
-            self.registry.remember(f"exec:{idempotency_key}", response)
+        if cache_key:
+            self.registry.remember(
+                cache_key, {"request": {"payload_ref": payload_ref}, "result": response}
+            )
         return response
 
     def settle(
@@ -921,7 +1022,7 @@ class Orchestrator:
                     if last
                     else sha256_prefixed(b"none"),
                     "counterparty": {"id": self.gate_did},
-                    "spec_ref": "continuity-receipt/0.1",
+                    "spec_ref": records.SPEC_ID,
                 },
             )
         return self._emit(
@@ -1083,7 +1184,7 @@ class Orchestrator:
                 "request_hash": sha256_prefixed(f"snapshot:{slot_id}:{snapshot_id}".encode()),
                 "response_hash": digest,
                 "counterparty": {"id": self.gate_did},
-                "spec_ref": "continuity-receipt/0.1",
+                "spec_ref": records.SPEC_ID,
                 "artifact": {
                     "snapshot_id": snapshot_id,
                     "kind": "filesystem-tar.gz",
@@ -1152,7 +1253,7 @@ class Orchestrator:
                 "request_hash": record["sha256"],
                 "response_hash": restored,
                 "counterparty": {"id": self.gate_did},
-                "spec_ref": "continuity-receipt/0.1",
+                "spec_ref": records.SPEC_ID,
                 "artifact": {
                     "snapshot_id": snapshot_id,
                     "kind": "filesystem-restore",
@@ -1218,9 +1319,20 @@ class Orchestrator:
                 )
         return {"expired": sealed, "count": len(sealed)}
 
+    def runner_info(self) -> dict:
+        runner = self.runner
+        info = {
+            "class": getattr(runner, "sandbox_class", "unknown"),
+            "simulated": isinstance(runner, StubRunner),
+        }
+        path = getattr(runner, "runner_path", None)
+        if path:
+            info["path"] = path
+        return info
+
     def status(self, tenant_id: str, slot_id: str) -> dict:
         slot = self._authorized_slot(tenant_id, slot_id)
-        return {"slot": slot}
+        return {"slot": slot, "runner": self.runner_info()}
 
     def list_(self, tenant_id: str) -> list[dict]:
         return self.registry.slots_for(tenant_id)

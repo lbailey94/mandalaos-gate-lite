@@ -1,0 +1,10 @@
+{
+  "slot_id": "slot-716aefb3ed42",
+  "exit": 0,
+  "stdout_hash": "sha256:70f56b165788f44bafc9484bd779004ab3d8c5d1cea0e9417f7c7a61ee7dcbcc",
+  "receipt_ids": [
+    "urn:uuid:01a0d0e6-4776-7db2-a4e0-a4b960a3b8cd",
+    "urn:uuid:01a0d0e6-47ba-773a-9e7b-f7eb3041090d"
+  ],
+  "stderr_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

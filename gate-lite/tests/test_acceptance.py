@@ -88,7 +88,7 @@ class TestFailClosedEmitter(unittest.TestCase):
             os.chmod(receipts, 0o500)
             try:
                 with self.assertRaises(EmitterError):
-                    orch.exec_("dogfood", issued["slot_id"], "echo nope")
+                    orch.exec_("dogfood", issued["slot_id"], "echo nope", token=issued["token"])
             finally:
                 os.chmod(receipts, 0o700)
 
@@ -97,7 +97,7 @@ class TestFailClosedEmitter(unittest.TestCase):
             bundle = orch.receipt(orch.task_id_for(issued["slot_id"]))
             self.assertEqual([r["type"] for r in bundle["receipts"]], ["session.pass.created"])
 
-            recovered = orch.exec_("dogfood", issued["slot_id"], "echo ok")
+            recovered = orch.exec_("dogfood", issued["slot_id"], "echo ok", token=issued["token"])
             self.assertEqual(recovered["exit"], 0)
             self.assertEqual(spy.calls, 1)
 
@@ -116,7 +116,12 @@ class TestFailClosedEmitter(unittest.TestCase):
                         "method": "tools/call",
                         "params": {
                             "name": "mandala.exec",
-                            "arguments": {"agent": agent, "slot": issued["slot_id"], "payload_ref": "echo x"},
+                            "arguments": {
+                                "agent": agent,
+                                "slot": issued["slot_id"],
+                                "payload_ref": "echo x",
+                                "token": issued["token"],
+                            },
                         },
                     }
                 )
@@ -159,7 +164,9 @@ class TestOperatorKillLive(unittest.TestCase):
 
             def run_exec():
                 try:
-                    outcome.update(orch.exec_("dogfood", issued["slot_id"], "sleep 30"))
+                    outcome.update(
+                        orch.exec_("dogfood", issued["slot_id"], "sleep 30", token=issued["token"])
+                    )
                 except Exception as exc:  # noqa: BLE001 - surfaced by the test
                     failure["exc"] = exc
 
@@ -209,7 +216,7 @@ class TestEgressDeny(unittest.TestCase):
                     "egress": [],
                 }
             )
-            executed = orch.exec_("dogfood", issued["slot_id"], payload_ref)
+            executed = orch.exec_("dogfood", issued["slot_id"], payload_ref, token=issued["token"])
             self.assertNotEqual(executed["exit"], 0)
 
             bundle = orch.receipt(orch.task_id_for(issued["slot_id"]))
@@ -230,7 +237,7 @@ class TestEgressDeny(unittest.TestCase):
                     "egress": ["example.com"],
                 }
             )
-            executed = orch.exec_("dogfood", issued["slot_id"], payload_ref)
+            executed = orch.exec_("dogfood", issued["slot_id"], payload_ref, token=issued["token"])
             self.assertNotEqual(executed["exit"], 0)
             self.assertIn("stderr_hash", executed)
 
@@ -249,10 +256,10 @@ class TestEgressDeny(unittest.TestCase):
 class TestQuotaKill(unittest.TestCase):
     """G2: quota overrun kills the slot (not the host); termination `quota`."""
 
-    def make_slice_orchestrator(self, state: Path) -> tuple[Orchestrator, str, str]:
+    def make_slice_orchestrator(self, state: Path) -> tuple[Orchestrator, str, dict]:
         orch, agent = make_orchestrator(state, runner=SliceRunner(WRAPPER))
         issued = orch.pass_("dogfood", agent, minutes=1)
-        return orch, agent, issued["slot_id"]
+        return orch, agent, issued
 
     def shrink(self, orch: Orchestrator, slot_id: str, **quotas) -> None:
         slot = orch.registry.get_slot(slot_id)
@@ -261,12 +268,13 @@ class TestQuotaKill(unittest.TestCase):
 
     def test_memory_overrun_kills_slot(self):
         with tempfile.TemporaryDirectory() as tmp:
-            orch, _agent, slot_id = self.make_slice_orchestrator(Path(tmp))
+            orch, _agent, issued = self.make_slice_orchestrator(Path(tmp))
+            slot_id = issued["slot_id"]
             self.shrink(orch, slot_id, mem_mb=96)
             payload_ref = json.dumps(
                 {"program": "python3", "args": ["-c", "x=bytearray(512*1024*1024); print(len(x))"]}
             )
-            executed = orch.exec_("dogfood", slot_id, payload_ref)
+            executed = orch.exec_("dogfood", slot_id, payload_ref, token=issued["token"])
             self.assertEqual(executed.get("kill_signal"), "quota")
             self.assertEqual(executed.get("reason"), "quota")
             self.assertEqual(orch.status("dogfood", slot_id)["slot"]["state"], "terminated")
@@ -279,9 +287,10 @@ class TestQuotaKill(unittest.TestCase):
 
     def test_wall_overrun_kills_slot(self):
         with tempfile.TemporaryDirectory() as tmp:
-            orch, _agent, slot_id = self.make_slice_orchestrator(Path(tmp))
+            orch, _agent, issued = self.make_slice_orchestrator(Path(tmp))
+            slot_id = issued["slot_id"]
             self.shrink(orch, slot_id, wall_ms=2000)
-            executed = orch.exec_("dogfood", slot_id, "sleep 30")
+            executed = orch.exec_("dogfood", slot_id, "sleep 30", token=issued["token"])
             self.assertEqual(executed.get("kill_signal"), "quota")
             bundle = orch.receipt(orch.task_id_for(slot_id))
             termination = bundle["receipts"][-1]
@@ -304,7 +313,7 @@ class TestWorkspaceRoundtrip(unittest.TestCase):
                     "args": ["-c", "open('/workspace/artifact.txt','w').write('from the sandbox')"],
                 }
             )
-            executed = orch.exec_("dogfood", issued["slot_id"], payload_ref)
+            executed = orch.exec_("dogfood", issued["slot_id"], payload_ref, token=issued["token"])
             self.assertEqual(executed["exit"], 0, executed)
             workspace = state / "workspaces" / issued["slot_id"]
             self.assertEqual((workspace / "artifact.txt").read_text(encoding="utf-8"), "from the sandbox")
@@ -327,7 +336,7 @@ class TestSnapshot(unittest.TestCase):
             state = Path(tmp)
             orch, agent = make_orchestrator(state)
             issued = orch.pass_("dogfood", agent)
-            orch.exec_("dogfood", issued["slot_id"], "echo snap")
+            orch.exec_("dogfood", issued["slot_id"], "echo snap", token=issued["token"])
             workspace = state / "workspaces" / issued["slot_id"]
             (workspace / "note.txt").write_text("dogfood artifact", encoding="utf-8")
 
@@ -341,7 +350,7 @@ class TestSnapshot(unittest.TestCase):
                 self.assertIn("note.txt", tar.getnames())
 
             with self.assertRaises(ValueError):
-                orch.exec_("dogfood", issued["slot_id"], "echo frozen")
+                orch.exec_("dogfood", issued["slot_id"], "echo frozen", token=issued["token"])
 
             bundle = orch.receipt(orch.task_id_for(issued["slot_id"]))
             attestations = [r for r in bundle["receipts"] if r["type"] == "delivery.attestation"]

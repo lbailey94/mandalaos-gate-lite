@@ -15,6 +15,7 @@ from gate_lite.orchestrator import Orchestrator  # noqa: E402
 
 EXPECTED_TOOLS = {
     "mandala.pass",
+    "mandala.pass.verify",
     "mandala.exec",
     "mandala.settle",
     "mandala.terminate",
@@ -131,6 +132,195 @@ class TestMcpInProcess(unittest.TestCase):
             self.assertEqual(receipt["verdict"]["verdict"], "TRUSTED", receipt["verdict"]["errors"])
             self.assertEqual(receipt["verdict"]["summary"]["receipts"], 6)
 
+    def test_status_reports_effective_runner(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            server, agent_did = make_server(Path(tmp))
+            passed = payload(
+                server.handle(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "tools/call",
+                        "params": {"name": "mandala.pass", "arguments": {"agent": agent_did}},
+                    }
+                )
+            )
+            status = payload(
+                server.handle(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 2,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "mandala.status",
+                            "arguments": {"slot": passed["slot_id"]},
+                        },
+                    }
+                )
+            )
+            self.assertEqual(status["runner"]["class"], "stub")
+            self.assertTrue(status["runner"]["simulated"])
+
+    def test_pass_verify_tool_returns_claims_and_registry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            server, agent_did = make_server(Path(tmp))
+            passed = payload(
+                server.handle(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "tools/call",
+                        "params": {"name": "mandala.pass", "arguments": {"agent": agent_did}},
+                    }
+                )
+            )
+            verified = payload(
+                server.handle(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 2,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "mandala.pass.verify",
+                            "arguments": {"token": passed["token"]},
+                        },
+                    }
+                )
+            )
+            self.assertTrue(verified["valid"])
+            self.assertEqual(verified["claims"]["pass_id"], passed["pass_id"])
+            self.assertEqual(verified["claims"]["slot_id"], passed["slot_id"])
+            self.assertEqual(verified["pass"]["pass_id"], passed["pass_id"])
+            self.assertFalse(verified["jti_seen"])
+            self.assertEqual(verified["gate_id"], server.orch.gate_id)
+
+    def test_exec_enforces_slot_binding_and_single_use(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            server, agent_did = make_server(Path(tmp))
+
+            def buy():
+                return payload(
+                    server.handle(
+                        {
+                            "jsonrpc": "2.0",
+                            "id": 1,
+                            "method": "tools/call",
+                            "params": {"name": "mandala.pass", "arguments": {"agent": agent_did}},
+                        }
+                    )
+                )
+
+            pass_a = buy()
+            pass_b = buy()
+            # Token bound to slot A cannot execute in slot B.
+            mismatch = payload(
+                server.handle(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 2,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "mandala.exec",
+                            "arguments": {
+                                "agent": agent_did,
+                                "slot": pass_b["slot_id"],
+                                "payload_ref": "echo cross",
+                                "token": pass_a["token"],
+                            },
+                        },
+                    }
+                )
+            )
+            self.assertEqual(mismatch["error"], "token_slot_mismatch")
+
+            # A valid use succeeds, and the same token is rejected afterwards.
+            first = payload(
+                server.handle(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 3,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "mandala.exec",
+                            "arguments": {
+                                "agent": agent_did,
+                                "slot": pass_a["slot_id"],
+                                "payload_ref": "echo once",
+                                "token": pass_a["token"],
+                            },
+                        },
+                    }
+                )
+            )
+            self.assertEqual(first["exit"], 0)
+            replay = payload(
+                server.handle(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 4,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "mandala.exec",
+                            "arguments": {
+                                "agent": agent_did,
+                                "slot": pass_a["slot_id"],
+                                "payload_ref": "echo twice",
+                                "token": pass_a["token"],
+                            },
+                        },
+                    }
+                )
+            )
+            self.assertEqual(replay["error"], "pass_replayed")
+
+            # The verified tool now reports the jti as seen.
+            verified = payload(
+                server.handle(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 5,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "mandala.pass.verify",
+                            "arguments": {"token": pass_a["token"]},
+                        },
+                    }
+                )
+            )
+            self.assertTrue(verified["jti_seen"])
+
+    def test_exec_without_token_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            server, agent_did = make_server(Path(tmp))
+            passed = payload(
+                server.handle(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "tools/call",
+                        "params": {"name": "mandala.pass", "arguments": {"agent": agent_did}},
+                    }
+                )
+            )
+            missing = payload(
+                server.handle(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 2,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "mandala.exec",
+                            "arguments": {
+                                "agent": agent_did,
+                                "slot": passed["slot_id"],
+                                "payload_ref": "echo no-token",
+                            },
+                        },
+                    }
+                )
+            )
+            self.assertEqual(missing["error"], "token_required")
+
     def test_tool_errors_are_structured(self):
         with tempfile.TemporaryDirectory() as tmp:
             server, agent_did = make_server(Path(tmp))
@@ -155,7 +345,7 @@ class TestMcpInProcess(unittest.TestCase):
                     }
                 )
             )
-            self.assertIn("pass_id", unknown_agent)  # v0 gates by tenant, not per-agent allowlist
+            self.assertEqual(unknown_agent["error"], "agent_not_registered")
 
     def test_method_not_found(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -170,7 +360,7 @@ class TestMcpSubprocess(unittest.TestCase):
             state = Path(tmp)
             server, agent_did = make_server(state)  # registers tenant in state.json
             proc = subprocess.Popen(
-                [sys.executable, "-m", "gate_lite.mcp_server", "--state", str(state), "--tenant", "dogfood"],
+                [sys.executable, "-m", "gate_lite.mcp_server", "--state", str(state), "--tenant", "dogfood", "--demo"],
                 cwd=str(ROOT),
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -222,6 +412,49 @@ class TestMcpSubprocess(unittest.TestCase):
             self.assertIn(receipt["verdict"]["verdict"], ("TRUSTED", "PROVISIONAL"))
             proc.stdin.close()
             proc.wait(timeout=10)
+
+    def test_stdio_refuses_without_runner_or_demo(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "gate_lite.mcp_server",
+                    "--state",
+                    tmp,
+                    "--tenant",
+                    "dogfood",
+                ],
+                cwd=str(ROOT),
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("refusing to start", proc.stderr)
+
+    def test_slice_without_runner_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "gate_lite.mcp_server",
+                    "--state",
+                    tmp,
+                    "--tenant",
+                    "dogfood",
+                    "--slice",
+                ],
+                cwd=str(ROOT),
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("requires a runner path", proc.stderr)
 
 
 if __name__ == "__main__":
