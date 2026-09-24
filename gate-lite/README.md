@@ -2,7 +2,7 @@
 
 First buildable slice of the Mandala Gate program: a cooperative-tenant
 orchestrator that issues governed passes and emits **Continuity Receipts**
-(`continuity-receipt/0.3`, via the published `continuity-receipt` reference
+(`continuity-receipt/0.4`, via the published `continuity-receipt` reference
 implementation — no vendored copy). Separate module/versioning from the
 Gen-2/WMv9 release train (decision 2026-09-17).
 
@@ -16,14 +16,14 @@ is gate-hard (microVM floor, v0.2).
 gate_lite/            orchestrator: pass → exec → settle → terminate
   ctl.py              mandala-ctl CLI
   mcp_server.py       MCP control surface (stdio + loopback HTTP/SSE)
-tools/make_vectors.py generates the spec test vectors (0.3; rewrites the
+tools/make_vectors.py generates the spec test vectors (0.4; rewrites the
                       tracked files — expect git status changes)
 tools/dogfood_run.py  full CLI dogfood on the real runner, evidence capture
 tools/install_sweep_timer.sh  systemd user timer for the expiry sweep
 tests/                unittest suites (86 tests)
 vectors/              generated bundles + INDEX.md
 evidence/             dogfood runs (run.json, SUMMARY.md, bundles, transcript)
-Dependency:           continuity-receipt>=0.3.1 (PyPI; 0.3.3 exercised)
+Dependency:           continuity-receipt>=0.4.0 (PyPI; 0.4.0 exercised)
 ```
 
 ## Quick start
@@ -35,7 +35,7 @@ python3 -m venv .venv
 PY=.venv/bin/python
 
 $PY tools/make_vectors.py        # rewrites the tracked vectors (fresh ids/timestamps)
-$PY -m unittest discover -s tests -v
+$PY -m unittest discover -s tests -v   # OOM-seal drill is opt-in: GATE_LITE_QUOTA_TESTS=1
 
 CTL=gate_lite/ctl.py
 $PY $CTL --state ./state tenant-add --tenant dogfood --agent did:key:zSmokeAgent1
@@ -169,8 +169,8 @@ choice, not a scaling need. Earlier fixes from the same suite:
 
 ## Status (2026-09-24)
 
-- Receipts: emits **`continuity-receipt/0.3`** via the published PyPI
-  reference implementation (`>=0.3.1`; 0.3.3 exercised) — no vendored copy
+- Receipts: emits **`continuity-receipt/0.4`** via the published PyPI
+  reference implementation (`>=0.4.0`; 0.4.0 exercised) — no vendored copy
   (migration `77821a7`, 2026-09-23). 11 gate-lite vectors green; the spec repo
   `github.com/lbailey94/continuity-receipt` (Apache-2.0) carries the wider
   vector set and the anchoring policy (`ANCHORING.md`).
@@ -204,7 +204,7 @@ choice, not a scaling need. Earlier fixes from the same suite:
 - Benchmarked: `tools/bench.py` + `evidence/bench-2026-09-18-sqlite/` (14/14
   invariants; registry scaling fixed).
 - Expiry sweep cadence: **systemd user timer installer** (`tools/install_sweep_timer.sh`).
-- Outsider exercise (protocol: `GATE_LITE_OUTSIDER_EXERCISE.md`):
+- Outsider exercise (protocol: `MANDALA_OS/publication/GATE_LITE_OUTSIDER_EXERCISE.md`):
   first run 2026-09-24 against pin `ac078e2` with the real runner — **PASS**,
   86/86 tests on a clean export, exec `sandbox_class=bwrap-landlock`, bundle
   TRUSTED offline; evidence + friction log in `evidence/outsider-2026-09-24/`.
@@ -224,7 +224,7 @@ choice, not a scaling need. Earlier fixes from the same suite:
 - Not yet: gate-hard (microVM floor), external-anchor issuance (policy decided;
   OTS proof verification is a 0.3 item), WM-store + karma-ledger registry
   integration. See `HANDOFF_2026-09-18.md` and
-  `design/GATE_LITE_ORCHESTRATOR_CONTRACT_2026-09-17.md` §14.
+  `MANDALA_OS/design/GATE_LITE_ORCHESTRATOR_CONTRACT_2026-09-17.md` §14.
 
 Requires Python 3.11+ and `cryptography` (Ed25519); runner needs `bubblewrap`
 (+ `jq`), slice mode needs a systemd user session.

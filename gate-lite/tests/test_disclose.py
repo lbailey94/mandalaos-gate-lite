@@ -42,7 +42,7 @@ class TestDisclosure(unittest.TestCase):
             redacted, disclosure = redact(bundle, [path], signer=signer)
             self.assertIn("redacted", redacted["receipts"][index]["body"]["spec_ref"])
             self.assertIn("commit", redacted["receipts"][index]["body"]["spec_ref"])
-            self.assertEqual(disclosure[path]["value"], "continuity-receipt/0.3")
+            self.assertEqual(disclosure[path]["value"], "continuity-receipt/0.4")
 
             result = verify_bundle(redacted)
             self.assertEqual(result.verdict, "PROVISIONAL")

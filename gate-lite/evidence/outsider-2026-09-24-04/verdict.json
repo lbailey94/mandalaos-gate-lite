@@ -1,0 +1,29 @@
+{
+  "verdict": "TRUSTED",
+  "errors": [],
+  "provisional_reasons": [],
+  "insufficient_reasons": [],
+  "summary": {
+    "receipts": 6,
+    "types": [
+      "session.pass.created",
+      "task.decision",
+      "task.execution",
+      "delivery.attestation",
+      "settlement",
+      "task.termination"
+    ],
+    "issuers": [
+      "did:key:z6Mkin9egtw5fYDox74s4UcQjq4onChNofsb5t9Tk6342E8s"
+    ],
+    "terminated": true,
+    "settled": true,
+    "attestations": [
+      {
+        "receipt_id": "urn:uuid:01a0d5b8-6b37-72f0-9072-a5128d7949f6",
+        "counterparty": "did:key:z6Mkin9egtw5fYDox74s4UcQjq4onChNofsb5t9Tk6342E8s",
+        "attestation": "absent"
+      }
+    ]
+  }
+}

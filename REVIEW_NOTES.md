@@ -5,10 +5,17 @@ commands in `README.md` §4. Priorities, in the maintainer's order:
 
 ## What changed in this revision (2026-09-24)
 
-- Code pin `ac078e2`; later documentation/evidence revisions `e7d40f5`,
+- The current review code pin is private `mandala-os` `033e5ce`. Its clean
+  export emits spec 0.4, passed 86 tests, and produced a real-runner bundle
+  that verified TRUSTED with the published 0.4.0 verifier. See
+  `gate-lite/evidence/outsider-2026-09-24-04/REPORT.md`.
+- The 0.3 exercise and bundle from the prior snapshot remain intact as
+  historical evidence. This snapshot also adds a future-project integration
+  contract without changing the tested gate-lite code after `033e5ce`.
+- Historical 0.3 code pin `ac078e2`; later documentation/evidence revisions `e7d40f5`,
   `a4553b0`, `9fb406c`, `c42320d` — no gate-lite code changed after the pin.
-- The 0.1-era **vendored verifier is gone**: receipts are spec `0.3` via the
-  published PyPI package `continuity-receipt` (0.3.3 exercised). Verifier
+- The 0.1-era **vendored verifier is gone**: current receipts are spec `0.4`
+  via the published PyPI package `continuity-receipt` (0.4.0 exercised). Verifier
   internals now live in the spec repo
   (github.com/lbailey94/continuity-receipt).
 - New since the 2026-09-18 snapshot: **authorization contract** (tenant
