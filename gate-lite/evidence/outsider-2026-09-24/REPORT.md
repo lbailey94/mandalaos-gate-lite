@@ -65,6 +65,14 @@ $PY -m continuity_receipt.verify vectors/02_happy_full.json
 
 ## Results
 
+**Classification correction (2026-09-25):** The `bwrap-landlock` value below
+is the historical signed issuer claim. The portable wrapper at the recorded
+digest invokes Bubblewrap, with no Landlock invocation observed in its source.
+The exercise distinguished a real runner from the stub, but did not prove that
+both confinement mechanisms were applied. Its same-host result does not close
+runner classification or independent other-host adoption. Original bundle
+and verifier artifacts are unchanged.
+
 - `make_vectors.py`: 11 vectors written.
 - Tests: `Ran 86 tests ... OK` (18.9 s) — independently reproduces the
   reported 86/86 on the pinned export with PyPI `continuity-receipt 0.3.3`.
