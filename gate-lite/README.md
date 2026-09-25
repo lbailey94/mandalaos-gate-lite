@@ -208,6 +208,13 @@ choice, not a scaling need. Earlier fixes from the same suite:
   first run 2026-09-24 against pin `ac078e2` with the real runner — **PASS**,
   86/86 tests on a clean export, exec `sandbox_class=bwrap-landlock`, bundle
   TRUSTED offline; evidence + friction log in `evidence/outsider-2026-09-24/`.
+  **Classification correction (2026-09-25):** that signed label is a historical
+  issuer claim. The portable wrapper at the recorded digest invokes Bubblewrap
+  and does not invoke Landlock, so this evidence does not establish the
+  combined class. The original bundles remain unchanged; runner classification
+  and independent other-host adoption are open. See the appended notes in the
+  outsider reports. This public repository is a curated 0.4 review snapshot,
+  not the current private gate-lite implementation.
 - Compatibility changes (2026-09-24, authorization contract): `mandala-ctl
   exec` now **requires `--token`** (from the `pass` output); `mandala.exec`
   over MCP now **requires `token`** (schema `required` updated); `mandala.pass`

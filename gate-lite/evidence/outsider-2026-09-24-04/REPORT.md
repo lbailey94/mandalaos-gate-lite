@@ -25,6 +25,14 @@ from this evidence bundle and report.
 
 ## Environment and results
 
+**Classification correction (2026-09-25):** The `bwrap-landlock` value below
+records what the signed receipt said. Subsequent inspection of the exact
+portable wrapper identified by the recorded SHA-256 found a Bubblewrap
+invocation and no Landlock invocation. `TRUSTED` establishes receipt
+signature/policy validity, not truth of the combined containment claim.
+This same-host exercise does not close runner classification or independent
+other-host adoption. Original bundle and verdict bytes are preserved.
+
 | Check | Result |
 |---|---|
 | Host | Same host as the maintainer, Zorin OS 18, Linux 7.0.0-31-generic; Python 3.12.3 |
