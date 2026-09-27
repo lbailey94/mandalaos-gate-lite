@@ -14,6 +14,7 @@ acceptance criteria from the issue:
      consume an old request.
 """
 import os
+import subprocess
 import sys
 import tempfile
 import threading
@@ -73,15 +74,27 @@ class GatedRunner:
         self.release = threading.Event()
         self.live_pid = live_pid
         self.calls = 0
+        self.child = None
 
     def run(self, slot, payload_ref, on_spawn=None):
         self.calls += 1
         if self.before_spawn.is_set():
             self.allow_spawn.wait(5)
-        pid = os.getpid() if self.live_pid else 4242
-        unit = "gate-test-noop" if self.live_pid else None
+        pid = 4242
+        pgid = None
+        unit = None
+        if self.live_pid:
+            # A real child process group journaled with a no-op unit: the
+            # kill path must terminate it through the systemd unit when that
+            # exists, and through the POSIX fallback when it does not
+            # (macOS has no systemctl; 2026-09-27 port report). Never the
+            # test process itself.
+            self.child = subprocess.Popen(["sleep", "30"], start_new_session=True)
+            pid = self.child.pid
+            pgid = os.getpgid(pid)
+            unit = "gate-test-noop"
         if on_spawn:
-            on_spawn(pid, None, unit)
+            on_spawn(pid, pgid, unit)
         self.spawned.set()
         self.release.wait(5)
         return ExecResult(
@@ -240,6 +253,14 @@ class TestLifecycleRace(unittest.TestCase):
                     "task.execution",
                     "task.termination",
                 ],
+            )
+            # The journaled process group must actually be gone — the kill
+            # path cannot be a platform-dependent no-op (systemctl on Linux,
+            # POSIX group signal everywhere else).
+            self.assertIsNotNone(runner.child)
+            self.assertIsNotNone(
+                runner.child.poll(),
+                "the kill path must terminate the journaled process group",
             )
 
 
