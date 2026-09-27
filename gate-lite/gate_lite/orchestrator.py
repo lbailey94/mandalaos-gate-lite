@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import shlex
+import shutil
 import signal as signal_mod
 import subprocess
 import tarfile
@@ -533,13 +534,21 @@ class Orchestrator:
             return False
 
     def _signal_run(self, run: dict, signal_name: str) -> None:
+        """Terminate a run: systemd unit when it exists, POSIX group otherwise.
+
+        macOS has no `systemctl`; containers without a user systemd session
+        have one that refuses. Both fall back to signalling the journaled
+        process group, so the kill path is never platform-broken (2026-09-27
+        macOS port report).
+        """
         unit = run.get("unit")
-        if unit:
-            subprocess.run(
+        if unit and shutil.which("systemctl"):
+            completed = subprocess.run(
                 ["systemctl", "--user", "kill", "--kill-whom=all", "-s", signal_name, unit],
                 capture_output=True,
             )
-            return
+            if completed.returncode == 0:
+                return
         sig = getattr(signal_mod, signal_name)
         pgid, pid = run.get("pgid"), run.get("pid")
         try:
