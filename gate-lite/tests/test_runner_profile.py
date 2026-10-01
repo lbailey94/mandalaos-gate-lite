@@ -121,3 +121,13 @@ class TestRunnerProfileFailClosed(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestImportedReceiptVersion(unittest.TestCase):
+    def test_imported_version_mismatch_refuses_before_state_creation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "state"
+            with patch("gate_lite.orchestrator.RECEIPT_RUNTIME_VERSION", "0.5.0"):
+                with self.assertRaisesRegex(RuntimeError, "does not match installed distribution"):
+                    Orchestrator(state, runner=StubRunner())
+            self.assertFalse(state.exists())

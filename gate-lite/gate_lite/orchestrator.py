@@ -425,6 +425,11 @@ class Orchestrator:
                 f"gate-lite emits Continuity Receipt {RECEIPT_SPEC}; expected "
                 f"continuity-receipt=={RECEIPT_PACKAGE_VERSION}, found {receipt_version}"
             )
+        if RECEIPT_RUNTIME_VERSION != receipt_version:
+            raise RuntimeError(
+                f"imported continuity-receipt version {RECEIPT_RUNTIME_VERSION} "
+                f"does not match installed distribution {receipt_version}"
+            )
         if RECEIPT_SPEC not in records.SUPPORTED_SPECS:
             raise RuntimeError(
                 f"imported continuity-receipt {RECEIPT_RUNTIME_VERSION} does not support "
