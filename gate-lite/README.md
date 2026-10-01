@@ -23,7 +23,7 @@ tools/install_sweep_timer.sh  systemd user timer for the expiry sweep
 tests/                unittest suites (86 tests)
 vectors/              generated bundles + INDEX.md
 evidence/             dogfood runs (run.json, SUMMARY.md, bundles, transcript)
-Dependency:           continuity-receipt>=0.4.0 (PyPI; 0.4.0 exercised)
+Dependency:           continuity-receipt==0.4.0 (PyPI; new bundles pin spec 0.4)
 ```
 
 ## Quick start
@@ -73,8 +73,10 @@ python3 -m gate_lite.mcp_server --state ./state --tenant dogfood --demo \
 ```
 
 The server refuses to start without a configured sandbox runner unless
-`--demo` is passed (`--runner`/`--slice` or `WM_GATELITE_RUNNER` otherwise);
-`mandala.status` reports the effective runner. `mandala.exec` requires the
+`--demo` is passed (`--runner`/`--slice` or `WM_GATELITE_RUNNER` otherwise).
+Configured real runners currently report `unknown` / `unqualified`, and
+`mandala.exec` refuses them before token consumption or payload spawn.
+`mandala.status` reports the resolved runner path and digest. Execution requires the
 single-use pass token from `mandala.pass` (bound to agent + slot; durable
 replay rejection).
 
@@ -95,7 +97,10 @@ with the Sovereign Edition
 (`MANDALAOS_SOVEREIGN/modules/landlock-isolation.nix`, bwrap + Landlock,
 `--exec <json envelope>` contract) and is installed to
 `~/.local/bin/mandala-sandbox`. Real execution requires it explicitly;
-without a runner the gate refuses (stub only via `--demo`).
+without a runner the gate refuses (stub only via `--demo`). The current 0.4
+containment hold also refuses real execution with this wrapper: its observed
+Bubblewrap-only behavior cannot honestly use the 0.4 `bwrap-landlock` class.
+These examples show runner selection, not a qualified execution path.
 
 ```bash
 WM_GATELITE_RUNNER=~/.local/bin/mandala-sandbox python3 $CTL ...   # bwrap
@@ -175,7 +180,7 @@ choice, not a scaling need. Earlier fixes from the same suite:
 ## Status (2026-09-24)
 
 - Receipts: emits **`continuity-receipt/0.4`** via the published PyPI
-  reference implementation (`>=0.4.0`; 0.4.0 exercised) — no vendored copy
+  reference implementation (`==0.4.0`) — no vendored copy
   (migration `77821a7`, 2026-09-23). 11 gate-lite vectors green; the spec repo
   `github.com/lbailey94/continuity-receipt` (Apache-2.0) carries the wider
   vector set and the anchoring policy (`ANCHORING.md`).

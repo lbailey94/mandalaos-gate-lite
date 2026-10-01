@@ -3,14 +3,7 @@ name = "gate-lite"
 version = "0.0.1"
 description = "Gate-lite P0 slice: governed passes + Continuity Receipts (continuity-receipt/0.4)"
 requires-python = ">=3.11"
-dependencies = [
-    "cryptography>=42",
-    # Upper-bounded on purpose: the disclosure snapshot asserts the 0.4 wire
-    # string, so a 0.5 spec bump must be a deliberate pin move (2026-09-27
-    # macOS port report: an unbounded floor let PyPI's 0.4.0 arrive under a
-    # snapshot that still expected 0.3).
-    "continuity-receipt>=0.4.0,<0.5",
-]
+dependencies = ["cryptography>=42", "continuity-receipt==0.4.0"]
 
 [build-system]
 requires = ["setuptools>=68"]
