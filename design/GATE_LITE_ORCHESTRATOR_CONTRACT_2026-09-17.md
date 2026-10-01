@@ -110,7 +110,10 @@ emitter). Settlement (if any) references the pass, not the token.
   the tenant store + scratch; `WM_SANDBOX_RUNNER` routes declared spawns
   through `landrun-sandbox`.
 - Egress: default-deny; declared destinations logged; denials recorded in
-  `task.execution.egress`.
+  `task.execution.egress`. The declared list is recorded intent only: a
+  granted egress is whole-network (`bwrap --share-net`) and entries carry
+  `"enforced": false`. Destination-level enforcement is planned, not present;
+  see `design/EGRESS_ENFORCEMENT_2026-09-30.md`.
 - Disclosed limitation in every tenant contract: containment class, not
   hypervisor isolation; cooperative tenants only.
 
@@ -187,7 +190,9 @@ library + reference verifier is the published PyPI package
   SandboxRunner via `WM_GATELITE_RUNNER`; SliceRunner (`WM_GATELITE_SLICE=1`)
   wraps it in a transient systemd user service (dogfooded 2026-09-18).
 - Egress default-deny via declared-execution envelopes; denials recorded in
-  `task.execution.egress`; enforcement is the wrapper's netns unshare.
+  `task.execution.egress` and enforced by the wrapper's netns unshare. A
+  granted egress is whole-network; the declared list is recorded intent with
+  `"enforced": false`, not a destination allowlist (2026-09-30 correction).
 - Operator kill: run journal (`<state>/runs/<slot>.json`), kill request file,
   SIGTERM with SIGKILL escalation, `kill_signal=operator` + latency in the
   termination receipt; the registry is SQLite (WAL + busy timeout), so the
@@ -263,7 +268,11 @@ library + reference verifier is the published PyPI package
 8. **Runner payloads:** plain commands or envelopes
    `{"program", "args", "net", "egress"}`. `net: true` without declared
    destinations is treated as undeclared and denied (recorded as
-   `destination: "undeclared"`).
+   `destination: "undeclared"`). A granted egress is whole-network: the
+   declared destinations are recorded intent (`"enforced": false`) and are
+   not individually enforced by the current profile; destination-level
+   enforcement is a planned qualified profile
+   (`design/EGRESS_ENFORCEMENT_2026-09-30.md`).
 9. **Authorization contract (2026-09-24):** pass issuance enforces
    `Tenant.agents` membership (`agent_not_registered`); `mandala.exec`
    requires a pass token bound to the slot's pass and agent

@@ -105,7 +105,12 @@ WM_GATELITE_SLICE=1 WM_GATELITE_RUNNER=~/.local/bin/mandala-sandbox ...  # + sli
 - Egress is default-deny: payloads are commands, or envelopes
   `{"program": "curl", "args": [...], "net": true, "egress": ["host"]}`.
   Undeclared attempts run without network and are recorded as denied in
-  `task.execution.egress`; `net: true` needs declared destinations.
+  `task.execution.egress`; `net: true` needs declared destinations. Declared
+  destinations are recorded intent, not an allowlist: when network is
+  granted, the current wrapper profile shares the whole network, and entries
+  carry `"enforced": false` to say the destination was not individually
+  enforced. Destination-level enforcement is a planned qualified profile;
+  see `../design/EGRESS_ENFORCEMENT_2026-09-30.md`.
 - The slot workspace is mounted writable at `/workspace` inside the sandbox
   (wrapper envelope `rw: true`), so payload artifacts land in
   `state/workspaces/<slot>/` and are captured by `mandala.snapshot`.

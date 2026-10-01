@@ -225,6 +225,7 @@ class TestEgressDeny(unittest.TestCase):
             self.assertEqual(egress[0]["destination"], "undeclared")
             self.assertFalse(egress[0]["allowed"])
             self.assertEqual(egress[0]["bytes"], 0)
+            self.assertTrue(egress[0]["enforced"])
 
     def test_declared_but_unpermitted_destination_denied(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -247,6 +248,7 @@ class TestEgressDeny(unittest.TestCase):
             self.assertEqual(egress[0]["destination"], "example.com")
             self.assertFalse(egress[0]["allowed"])
             self.assertEqual(egress[0]["bytes"], 0)
+            self.assertTrue(egress[0]["enforced"])
             orch.terminate("dogfood", issued["slot_id"])
             bundle = orch.receipt(orch.task_id_for(issued["slot_id"]))
             self.assertEqual(verify_bundle(bundle).verdict, "TRUSTED")
