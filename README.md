@@ -1,15 +1,22 @@
 # MandalaOS — gate-lite public-review snapshot
 
-Status date: 2026-09-30. This is a curated, review-only snapshot of one slice
+Status date: 2026-10-01. This is a curated, review-only snapshot of one slice
 of the MandalaOS project. It is not a release and does not represent the whole
 system.
 
 ## 0. Provenance of this revision
 
-- **Current tested code pin:** private `mandala-os` `033e5ce` (86 tests green
-  on a clean export; real-runner 0.4 bundle TRUSTED). See
-  `gate-lite/evidence/outsider-2026-09-24-04/REPORT.md`. The public snapshot
-  adds documentation and captured evidence after that tested code pin.
+- **Current curated source pin:** `0eeac42` (public branch). It pins
+  `continuity-receipt==0.4.0` and checks that imported runtime version matches
+  installed distribution metadata before gate-lite starts. Real execution is
+  held for configured runners reported as `unknown` / `unqualified`; exec
+  refuses before token consumption or payload spawn. See
+  `gate-lite/INTEGRATION_CONTRACT.md` for the current boundary.
+- **Historical exercise:** private `mandala-os` `033e5ce` had 86 tests green
+  on a clean export and produced a real-runner 0.4 bundle that verified
+  `TRUSTED`. That evidence applies to its recorded source pin and environment,
+  not the current curated source. See
+  `gate-lite/evidence/outsider-2026-09-24-04/REPORT.md`.
 - **Historical tested code pin:** `ac078e2`, exercised with receipt spec 0.3.
   Its evidence remains under `gate-lite/evidence/outsider-2026-09-24/` and
   must retain that version label.
@@ -47,15 +54,15 @@ CLI and an MCP server (stdio + loopback HTTP/SSE).
 | Claim | State |
 |---|---|
 | P0 slice | built and exercised end-to-end |
-| Acceptance G1–G8 | pass (incl. G7 snapshot → destroy → recreate → restore roundtrip) |
-| Test suite | **86 tests green** (`unittest`, clean export) |
+| Historical acceptance G1–G8 | Recorded for the historical exercise; current real execution remains held |
+| Current test suite | **103 passed, 6 explicit runner-dependent skips** (fresh exact 0.4.0 environment, 2026-10-01) |
 | Authorization | tenant membership at issuance; required single-use token at exec; durable atomic replay (restart + concurrent requests); idempotency cache is authorization-first and tenant/slot scoped |
-| Stub safety | exec and the MCP server refuse without a real runner unless `--demo`; `mandala.status` reports the effective runner |
-| Outsider exercise | PASS 2026-09-24 against 0.4 pin `033e5ce` (clean export, real runner, bundle TRUSTED offline); earlier 0.3 run retained — both same-host reproductions, see §0 |
-| Receipts | spec `0.4` via published PyPI `continuity-receipt 0.4.0` in the captured run (no vendored copy) |
-| Dogfood | 33/33 checks on the real bwrap runner + systemd slices (2026-09-18 evidence) |
+| Runner hold | Configured runners report `unknown` / `unqualified`; real exec refuses before token consumption or payload spawn. `--demo` is simulated execution only |
+| Historical outsider exercise | PASS 2026-09-24 against private source pin `033e5ce` (clean export, real runner, bundle TRUSTED offline); this same-host reproduction does not qualify current source or an independent host |
+| Receipts | Current curated source requires exact `continuity-receipt==0.4.0`, checks imported runtime against distribution metadata, and emits spec `0.4` (no vendored copy) |
+| Historical dogfood | 33/33 checks on the real bwrap runner + systemd slices (2026-09-18 evidence; historical environment) |
 | Benchmark | 14/14 invariants, pre- and post-SQLite registry fix (2026-09-18 evidence) |
-| Containment class | **shared-kernel** (bwrap/Landlock); described as such everywhere |
+| Containment | The design is shared-kernel; current configured runners are held as `unknown` / `unqualified`. A Bubblewrap-only observation is not reported as `bwrap-landlock` |
 | Untrusted multi-tenant | **never sold as this** — that is gate-hard (microVM floor, not built) |
 
 Claim labels are used deliberately: "built and exercised", not "production".
