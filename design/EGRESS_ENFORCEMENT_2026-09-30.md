@@ -43,9 +43,10 @@ above is a truth fix independent of when enforcement lands.
    Any granted-egress pass remains an operator decision, and receipts say
    exactly what was enforced.
 2. **Next qualified profile:** option B on the bwrap lane — a per-slot
-   filtering proxy with fail-closed behavior — because it is implementable
-   unprivileged inside the existing `--share-net` wrapper, and its
-   enforcement can be proven from the outside. Option A is a fallback for
+   filtering proxy with fail-closed behavior — using a no-network namespace and a host-side proxy over a narrowly
+   exposed Unix socket. A `--share-net` wrapper alone cannot prevent proxy
+   bypass. Qualification must test raw-network refusal and proxy-only
+   access on the exact profile. Option A is a fallback for
    fixed endpoints; option C belongs to the microVM track.
 3. A profile may only claim `"enforced": true` with an enforcer id when the
    acceptance suite below passes on the host where it runs.

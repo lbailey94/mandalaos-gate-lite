@@ -30,8 +30,10 @@ system.
   `mandala-os` `0b6929f`; see `design/EGRESS_ENFORCEMENT_2026-09-30.md`. This
   slice is vocabulary and documentation only — destination enforcement is not
   added.
-- The receipt format's current published revision is `continuity-receipt/0.4`
-  (spec repo: github.com/lbailey94/continuity-receipt; also on PyPI). This
+- This snapshot uses receipt revision `continuity-receipt/0.4`; the published
+  package has since advanced to 0.5.0. This source intentionally stays pinned
+  to 0.4.0 until a separate reviewed port. The format source is
+  `github.com/lbailey94/continuity-receipt` (also on PyPI). This
   snapshot **does not vendor the verifier** — it installs the published
   package as a dependency.
 
