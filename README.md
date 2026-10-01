@@ -1,6 +1,6 @@
 # MandalaOS — gate-lite public-review snapshot
 
-Status date: 2026-09-24. This is a curated, review-only snapshot of one slice
+Status date: 2026-09-30. This is a curated, review-only snapshot of one slice
 of the MandalaOS project. It is not a release and does not represent the whole
 system.
 
@@ -17,6 +17,12 @@ system.
   reproduction by a collaborator with a pre-existing runner — not an
   unassisted stranger install**. A genuinely new tester on another machine
   remains a separate gate; this snapshot must not be read as that.
+- **2026-09-30 egress-truth port:** `parse_payload` entries now carry a
+  per-entry `"enforced"` flag. A granted egress is whole-network; the declared
+  destinations are recorded intent, not an allowlist. Ported from private
+  `mandala-os` `0b6929f`; see `design/EGRESS_ENFORCEMENT_2026-09-30.md`. This
+  slice is vocabulary and documentation only — destination enforcement is not
+  added.
 - The receipt format's current published revision is `continuity-receipt/0.4`
   (spec repo: github.com/lbailey94/continuity-receipt; also on PyPI). This
   snapshot **does not vendor the verifier** — it installs the published

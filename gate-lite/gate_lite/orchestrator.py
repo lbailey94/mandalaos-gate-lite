@@ -99,7 +99,11 @@ def parse_payload(payload_ref: str) -> dict:
     Envelope: {"program": "curl", "args": [...], "net": true,
                "egress": ["example.com"]}. Egress is default-deny: network is
     shared only when `net` is true AND destinations are declared. Undeclared
-    attempts run without network and are recorded as denied.
+    attempts run without network and are recorded as denied. The declared
+    destination list is recorded intent, not an allowlist: the current
+    wrapper profile grants whole-network access (`bwrap --share-net`) and does
+    not enforce individual destinations. Denials are enforced by the netns
+    unshare. See design/EGRESS_ENFORCEMENT_2026-09-30.md.
     """
     text = payload_ref.strip()
     if text.startswith("{"):
@@ -118,12 +122,19 @@ def parse_payload(payload_ref: str) -> dict:
         wants_net, declared = False, []
 
     allowed_net = wants_net and bool(declared)
+    # `enforced` is per entry: denials are enforced by the netns unshare.
+    # Granted egress is whole-network, so declared destinations are recorded
+    # intent and are NOT individually enforced.
     egress = [
         {
             "destination": dest,
             "bytes": None if allowed_net else 0,
             "allowed": allowed_net,
-            "enforcer": "bwrap --share-net" if allowed_net else "bwrap --unshare-net",
+            "enforcer": (
+                "bwrap --share-net (whole network; destinations not individually enforced)"
+                if allowed_net else "bwrap --unshare-net"
+            ),
+            "enforced": not allowed_net,
         }
         for dest in declared
     ]
@@ -134,6 +145,7 @@ def parse_payload(payload_ref: str) -> dict:
                 "bytes": 0,
                 "allowed": False,
                 "enforcer": "bwrap --unshare-net",
+                "enforced": True,
                 "denied_reason": "net requested without declared destinations",
             }
         ]
@@ -171,7 +183,8 @@ class StubRunner:
             exit_code=0,
             stdout_hash=sha256_prefixed(("stub:" + payload_ref).encode()),
             resources={"cpu_ms": 900, "mem_peak_mb": 32, "disk_peak_mb": 4},
-            egress=[{"destination": "none", "bytes": 0, "allowed": True}],
+            egress=[{"destination": "none", "bytes": 0, "allowed": True,
+                     "enforcer": "demo-stub", "enforced": False}],
         )
 
 
@@ -933,7 +946,15 @@ class Orchestrator:
                         "result_hash": result.stdout_hash,
                     }
                 ],
-                "egress": result.egress or [{"destination": "none", "bytes": 0, "allowed": True}],
+                "egress": result.egress or [
+                    {
+                        "destination": "none",
+                        "bytes": 0,
+                        "allowed": True,
+                        "enforcer": "bwrap --unshare-all",
+                        "enforced": True,
+                    }
+                ],
                 "resources": result.resources,
                 "sandbox_class": getattr(self.runner, "sandbox_class", "bwrap-landlock"),
             },
