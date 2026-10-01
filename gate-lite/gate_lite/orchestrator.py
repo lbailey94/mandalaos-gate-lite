@@ -1,5 +1,6 @@
 """Gate-lite orchestrator v0: pass → exec → settle → terminate with Continuity Receipts."""
 import hashlib
+import importlib.metadata
 import json
 import os
 import shlex
@@ -13,7 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-from continuity_receipt import records
+from continuity_receipt import __version__ as RECEIPT_RUNTIME_VERSION, records
 from continuity_receipt.bundle import TaskChain
 from continuity_receipt.canon import sha256_prefixed
 
@@ -22,6 +23,8 @@ from .registry import Registry
 from .tokens import issue_pass, verify_pass
 
 POLICY_VERSION = "2026-09-17.1"
+RECEIPT_SPEC = "continuity-receipt/0.4"
+RECEIPT_PACKAGE_VERSION = "0.4.0"
 GATE_CLASS = "gate-lite"
 BLOCKED_STATES = ("terminated", "expired", "denied", "frozen")
 CPU_QUOTA_PERCENT = {"small": 100, "medium": 200}
@@ -41,6 +44,10 @@ IDLE_SEALABLE_STATES = ("placed", "active", "frozen")
 
 class EmitterError(RuntimeError):
     """Receipt emitter unavailable — the gate fails closed (no unrecorded work)."""
+
+
+class RunnerProfileError(RuntimeError):
+    """Real execution is unavailable until its runner has a reviewed profile."""
 
 
 class PassError(PermissionError):
@@ -189,17 +196,57 @@ class StubRunner:
 
 
 class SandboxRunner:
-    """Invokes the host containment wrapper (`mandala-sandbox --exec`).
+    """Identity-check a host wrapper pending a qualified receipt profile.
 
-    Enable with `WM_GATELITE_RUNNER=/path/to/mandala-sandbox`. Payload refs are
-    commands or declared-execution envelopes (see `parse_payload`); network is
-    default-deny and enforcement is the wrapper's netns unshare.
+    The configured binary is resolved and hashed, but real runs remain blocked
+    until the exact executable and its mechanisms map to a reviewed class in
+    the pinned receipt vocabulary. A digest identifies bytes; it proves no
+    containment behavior.
     """
 
-    sandbox_class = "bwrap-landlock"
+    # Published receipt 0.4 has no honest class for the current portable
+    # Bubblewrap wrapper. Keep this unknown until a reviewed, versioned profile
+    # is available; in particular, never inherit bwrap-landlock by default.
+    sandbox_class = "unknown"
 
     def __init__(self, runner_path: str):
-        self.runner_path = runner_path
+        try:
+            self.runner_path = str(Path(runner_path).expanduser().resolve(strict=True))
+            if not Path(self.runner_path).is_file() or not os.access(self.runner_path, os.X_OK):
+                raise RunnerProfileError("runner identity unavailable: executable is not runnable")
+            self.runner_digest = self._digest(self.runner_path)
+        except RunnerProfileError:
+            raise
+        except OSError as exc:
+            raise RunnerProfileError(f"runner identity unavailable: {exc}") from exc
+        self.profile_id = None
+        self.profile_status = "unqualified"
+        self._observed_class = self.sandbox_class
+
+    @staticmethod
+    def _digest(path: str) -> str:
+        digest = hashlib.sha256()
+        with open(path, "rb") as runner_file:
+            for chunk in iter(lambda: runner_file.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return "sha256:" + digest.hexdigest()
+
+    def _require_profile(self) -> None:
+        if self.sandbox_class != self._observed_class:
+            raise RunnerProfileError("runner profile class mismatch")
+        try:
+            current_path = str(Path(self.runner_path).resolve(strict=True))
+            current_digest = self._digest(current_path)
+        except OSError as exc:
+            raise RunnerProfileError(f"runner identity unavailable: {exc}") from exc
+        if current_path != self.runner_path or current_digest != self.runner_digest:
+            raise RunnerProfileError("runner identity changed after inspection")
+        # No profile is currently qualified against the published 0.4 class
+        # vocabulary. Hashing identifies bytes; it does not prove mechanisms.
+        raise RunnerProfileError(
+            "no reviewed runner profile is qualified for Continuity Receipt 0.4; "
+            "real payload execution is disabled"
+        )
 
     def _argv(self, plan: dict) -> list[str]:
         return [self.runner_path, "--exec", _plan_envelope(plan)]
@@ -237,6 +284,7 @@ class SandboxRunner:
         )
 
     def run(self, slot: dict, payload_ref: str, on_spawn=None) -> ExecResult:
+        self._require_profile()
         plan = parse_payload(payload_ref)
         if slot.get("workspace"):
             plan["workspace"] = slot["workspace"]
@@ -265,7 +313,7 @@ class SliceRunner(SandboxRunner):
     not a kill (documented behavior).
     """
 
-    sandbox_class = "bwrap-landlock+systemd-slice"
+    sandbox_class = "unknown"
 
     def __init__(self, runner_path: str, cpu_percent: int | None = None):
         super().__init__(runner_path)
@@ -367,6 +415,26 @@ class Orchestrator:
         runner=None,
     ):
         from continuity_receipt import keys
+
+        try:
+            receipt_version = importlib.metadata.version("continuity-receipt")
+        except importlib.metadata.PackageNotFoundError as exc:
+            raise RuntimeError("continuity-receipt==0.4.0 must be installed") from exc
+        if receipt_version != RECEIPT_PACKAGE_VERSION:
+            raise RuntimeError(
+                f"gate-lite emits Continuity Receipt {RECEIPT_SPEC}; expected "
+                f"continuity-receipt=={RECEIPT_PACKAGE_VERSION}, found {receipt_version}"
+            )
+        if RECEIPT_RUNTIME_VERSION != receipt_version:
+            raise RuntimeError(
+                f"imported continuity-receipt version {RECEIPT_RUNTIME_VERSION} "
+                f"does not match installed distribution {receipt_version}"
+            )
+        if RECEIPT_SPEC not in records.SUPPORTED_SPECS:
+            raise RuntimeError(
+                f"imported continuity-receipt {RECEIPT_RUNTIME_VERSION} does not support "
+                f"gate-lite's pinned spec {RECEIPT_SPEC}"
+            )
 
         self.state_dir = Path(state_dir)
         self.state_dir.mkdir(parents=True, exist_ok=True)
@@ -588,7 +656,7 @@ class Orchestrator:
                 chain.receipts = bundle.get("receipts", [])
                 self._chains[slot["slot_id"]] = chain
                 return chain
-        chain = TaskChain(task_id=task_id)
+        chain = TaskChain(task_id=task_id, spec=RECEIPT_SPEC)
         self._chains[slot["slot_id"]] = chain
         return chain
 
@@ -849,6 +917,11 @@ class Orchestrator:
         # the original payload. Cache keys are tenant+slot scoped.
         slot = self._authorized_slot(tenant_id, slot_id)
         claims = self._verify_exec_token(slot, token, agent_id)
+        if isinstance(self.runner, SandboxRunner):
+            # An old idempotency result must not make an unqualified runner
+            # appear ready. This also precedes reservation, token burn, and
+            # all paths that could spawn a new process.
+            self.runner._require_profile()
         cache_key = (
             f"exec:{tenant_id}:{slot_id}:{idempotency_key}" if idempotency_key else None
         )
@@ -956,7 +1029,7 @@ class Orchestrator:
                     }
                 ],
                 "resources": result.resources,
-                "sandbox_class": getattr(self.runner, "sandbox_class", "bwrap-landlock"),
+                "sandbox_class": getattr(self.runner, "sandbox_class", "unknown"),
             },
         )
 
@@ -1052,7 +1125,7 @@ class Orchestrator:
                     if last
                     else sha256_prefixed(b"none"),
                     "counterparty": {"id": self.gate_did},
-                    "spec_ref": records.SPEC_ID,
+                    "spec_ref": RECEIPT_SPEC,
                 },
             )
         return self._emit(
@@ -1214,7 +1287,7 @@ class Orchestrator:
                 "request_hash": sha256_prefixed(f"snapshot:{slot_id}:{snapshot_id}".encode()),
                 "response_hash": digest,
                 "counterparty": {"id": self.gate_did},
-                "spec_ref": records.SPEC_ID,
+                "spec_ref": RECEIPT_SPEC,
                 "artifact": {
                     "snapshot_id": snapshot_id,
                     "kind": "filesystem-tar.gz",
@@ -1283,7 +1356,7 @@ class Orchestrator:
                 "request_hash": record["sha256"],
                 "response_hash": restored,
                 "counterparty": {"id": self.gate_did},
-                "spec_ref": records.SPEC_ID,
+                "spec_ref": RECEIPT_SPEC,
                 "artifact": {
                     "snapshot_id": snapshot_id,
                     "kind": "filesystem-restore",
@@ -1358,6 +1431,18 @@ class Orchestrator:
         path = getattr(runner, "runner_path", None)
         if path:
             info["path"] = path
+        digest = getattr(runner, "runner_digest", None)
+        if digest:
+            info["executable_sha256"] = digest
+        profile_id = getattr(runner, "profile_id", None)
+        if profile_id:
+            info["profile_id"] = profile_id
+        info["profile_status"] = getattr(
+            runner, "profile_status", "simulated" if isinstance(runner, StubRunner) else "unqualified"
+        )
+        info["receipt_spec"] = RECEIPT_SPEC
+        info["receipt_dependency"] = RECEIPT_PACKAGE_VERSION
+        info["receipt_runtime_version"] = RECEIPT_RUNTIME_VERSION
         return info
 
     def status(self, tenant_id: str, slot_id: str) -> dict:

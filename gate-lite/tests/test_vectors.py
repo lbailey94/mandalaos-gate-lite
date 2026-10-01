@@ -69,7 +69,7 @@ class TestPrimitives(unittest.TestCase):
 
     def test_chain_link_tamper_detected(self):
         did, key = keys.generate(keys.deterministic_seed("chain"))
-        chain = TaskChain()
+        chain = TaskChain(spec="continuity-receipt/0.4")
         chain.add("session.pass.created", "gate", did, key, {
             "gate_id": "g", "mandala_class": "gate-lite",
             "quotas": {}, "expires_at": "2026-09-18T00:00:00Z",

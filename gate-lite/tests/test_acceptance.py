@@ -34,6 +34,9 @@ WRAPPER = (
     or str(Path.home() / ".local" / "bin" / "mandala-sandbox")
 )
 HAS_SANDBOX = Path(WRAPPER).exists() and shutil.which("bwrap") is not None
+# These integration cases execute real payloads. They stay disabled while no
+# exact runner build has a reviewed profile for the pinned receipt vocabulary.
+HAS_QUALIFIED_RUNNER_PROFILE = False
 
 
 def systemd_user_ok() -> bool:
@@ -149,7 +152,7 @@ class TestOperatorKillIdle(unittest.TestCase):
             self.assertEqual(verify_bundle(bundle).verdict, "TRUSTED")
 
 
-@unittest.skipUnless(HAS_SANDBOX, f"needs bwrap + mandala-sandbox ({WRAPPER})")
+@unittest.skipUnless(HAS_SANDBOX and HAS_QUALIFIED_RUNNER_PROFILE, "runner profile is not qualified")
 class TestOperatorKillLive(unittest.TestCase):
     """G6: kill a live sandboxed run within N seconds; receipt `operator`."""
 
@@ -200,7 +203,7 @@ class TestOperatorKillLive(unittest.TestCase):
             self.assertEqual(verify_bundle(bundle).verdict, "TRUSTED")
 
 
-@unittest.skipUnless(HAS_SANDBOX, f"needs bwrap + mandala-sandbox ({WRAPPER})")
+@unittest.skipUnless(HAS_SANDBOX and HAS_QUALIFIED_RUNNER_PROFILE, "runner profile is not qualified")
 class TestEgressDeny(unittest.TestCase):
     """G3: undeclared egress denied + recorded; no reachability."""
 
@@ -254,7 +257,10 @@ class TestEgressDeny(unittest.TestCase):
             self.assertEqual(verify_bundle(bundle).verdict, "TRUSTED")
 
 
-@unittest.skipUnless(HAS_SANDBOX and HAS_SYSTEMD, "needs bwrap + sandbox + systemd user manager")
+@unittest.skipUnless(
+    HAS_SANDBOX and HAS_SYSTEMD and HAS_QUALIFIED_RUNNER_PROFILE,
+    "runner profile is not qualified",
+)
 class TestQuotaKill(unittest.TestCase):
     """G2: quota overrun kills the slot (not the host); termination `quota`."""
 
@@ -305,7 +311,7 @@ class TestQuotaKill(unittest.TestCase):
             self.assertEqual(verify_bundle(bundle).verdict, "TRUSTED")
 
 
-@unittest.skipUnless(HAS_SANDBOX, f"needs bwrap + mandala-sandbox ({WRAPPER})")
+@unittest.skipUnless(HAS_SANDBOX and HAS_QUALIFIED_RUNNER_PROFILE, "runner profile is not qualified")
 class TestWorkspaceRoundtrip(unittest.TestCase):
     """G7: runner-written artifacts land in the slot workspace, survive snapshot/restore."""
 
