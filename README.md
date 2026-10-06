@@ -4,6 +4,8 @@ Status date: 2026-10-01. This is a curated, review-only snapshot of one slice
 of the MandalaOS project. It is not a release and does not represent the whole
 system.
 
+Project site and discovery surfaces: https://www.whitemagic.dev
+
 ## 0. Provenance of this revision
 
 - **Current curated source pin:** `0eeac42` (public branch). It pins
