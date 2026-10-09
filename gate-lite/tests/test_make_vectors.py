@@ -37,7 +37,7 @@ class TestMakeVectors(unittest.TestCase):
 
                 index = (output_dir / "INDEX.md").read_text(encoding="utf-8")
                 self.assertIn(f"# Continuity Receipt spec {spec.rsplit('/', 1)[1]}", index)
-                self.assertIn(f"--spec {spec} --output-dir <output-dir>", index)
+                self.assertIn(f"--spec {spec.rsplit('/', 1)[1]} --out <output-dir>", index)
 
                 self.assertEqual(set(EXPECTED), {path.name for path in output_dir.glob("*.json")})
                 for name, (verdict, code, require_anchor) in EXPECTED.items():
