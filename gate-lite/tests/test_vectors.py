@@ -31,7 +31,7 @@ class TestVectors(unittest.TestCase):
     def test_all_vectors(self):
         for name, (verdict, code, require_anchor) in EXPECTED.items():
             path = VECTORS / name
-            self.assertTrue(path.exists(), f"missing vector {name}; run tools/make_vectors.py")
+            self.assertTrue(path.exists(), f"missing historical vector {name}; restore vectors/ from the reviewed source")
             bundle = json.loads(path.read_text(encoding="utf-8"))
             result = verify_bundle(bundle, require_anchor=require_anchor)
             self.assertEqual(

@@ -131,6 +131,31 @@ class TestRunnerProfileFailClosed(unittest.TestCase):
             self.assertEqual(info["profile_status"], "simulated")
             self.assertEqual(bundle["spec"], "continuity-receipt/0.5")
 
+    def test_invalid_profile_payload_releases_token_and_start_reservation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runner = self.make_runner(Path(tmp) / "runner")
+            orch = Orchestrator(Path(tmp) / "state", runner=runner)
+            orch.add_tenant("tenant", ["did:key:test"])
+            issued = orch.pass_("tenant", "did:key:test")
+            slot_id = issued["slot_id"]
+            before = orch.registry.get_slot(slot_id)["state"]
+            # Isolate payload planning from host profile qualification/spawn.
+            # profile_for remains real: malformed JSON fails in that method.
+            result = StubRunner().run({}, "echo retry")
+            with patch.object(runner, "_require_profile"), patch.object(runner, "run", return_value=result) as run:
+                with self.assertRaises(ValueError):
+                    orch.exec_("tenant", slot_id, '{bad json', token=issued["token"])
+                run.assert_not_called()
+                self.assertEqual(orch.registry.get_slot(slot_id)["state"], before)
+                self.assertIsNone(orch.active_run(slot_id))
+                claims = orch._verify_exec_token(orch.registry.get_slot(slot_id), issued["token"], None)
+                self.assertFalse(orch.registry.jti_consumed(claims["jti"]))
+                bundle = orch.receipt(orch.task_id_for(slot_id))
+                self.assertFalse(any(r["type"] == "task.execution" for r in bundle["receipts"]))
+                retried = orch.exec_("tenant", slot_id, "echo retry", token=issued["token"])
+                self.assertEqual(retried["exit"], 0)
+                run.assert_called_once()
+
     def test_cached_exec_cannot_bypass_unqualified_profile(self):
         with tempfile.TemporaryDirectory() as tmp:
             runner = self.make_runner(Path(tmp) / "runner")

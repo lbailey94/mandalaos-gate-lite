@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -53,6 +54,21 @@ class TestMakeVectors(unittest.TestCase):
                     self.assertEqual(result.verdict, verdict, f"{spec} {name}: {result.errors}")
                     if code:
                         self.assertIn(code, result.codes(), f"{spec} {name}: {result.codes()}")
+
+    def test_historical_descendants_and_symlink_aliases_are_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            historical = Path(tmp) / "historical"
+            historical.mkdir()
+            sentinel = historical / "old.json"
+            sentinel.write_bytes(b"preserved historical bytes")
+            alias = Path(tmp) / "alias"
+            alias.symlink_to(historical, target_is_directory=True)
+            with patch.object(make_vectors, "VECTORS", historical):
+                for output in (historical / "new-0.5", alias / "nested" / "new-0.5"):
+                    with self.subTest(output=output), self.assertRaises(ValueError):
+                        make_vectors.generate_vectors(output, "continuity-receipt/0.5")
+            self.assertEqual(list(historical.iterdir()), [sentinel])
+            self.assertEqual(sentinel.read_bytes(), b"preserved historical bytes")
 
     def test_historical_vectors_cannot_be_selected_as_output(self):
         vector_dir = ROOT / "vectors"

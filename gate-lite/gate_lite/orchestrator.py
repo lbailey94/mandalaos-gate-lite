@@ -1084,8 +1084,10 @@ class Orchestrator:
 
         run_slot = dict(slot)
         run_slot["workspace"] = str(self.workspaces_dir / slot_id)
-        runner_profile = self.runner.profile_for(run_slot, payload_ref) if isinstance(self.runner, SandboxRunner) else None
         try:
+            # Planning can reject malformed payloads before a process exists;
+            # use the same reservation/token cleanup as runner pre-start errors.
+            runner_profile = self.runner.profile_for(run_slot, payload_ref) if isinstance(self.runner, SandboxRunner) else None
             result = self.runner.run(run_slot, payload_ref, on_spawn=on_spawn)
         except Exception:
             # The runner failed before any process of record exists; release

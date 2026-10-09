@@ -145,7 +145,7 @@ def generate_vectors(output_dir: Path, spec: str) -> int:
     output_dir = Path(output_dir).resolve()
     if spec not in SPECS:
         raise ValueError(f"unsupported receipt spec: {spec}")
-    if output_dir == VECTORS.resolve():
+    if output_dir.is_relative_to(VECTORS.resolve()):
         raise ValueError(f"refusing to overwrite historical vectors at {VECTORS}; choose a separate output directory")
     output_dir.mkdir(parents=True, exist_ok=True)
     rows = []
