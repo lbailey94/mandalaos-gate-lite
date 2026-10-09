@@ -11,6 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from test_env import controlled_test_env  # noqa: E402
 
 from continuity_receipt import keys  # noqa: E402
 from gate_lite.mcp_server import McpHttpServer, McpServer  # noqa: E402
@@ -135,7 +136,7 @@ class TestHttpTransport(unittest.TestCase):
         terminated = call(5, "mandala.terminate", {"slot": passed["slot_id"]})
         receipt = call(6, "mandala.receipt", {"task_id": terminated["task_id"], "verify": True})
         self.assertEqual(receipt["verdict"]["verdict"], "TRUSTED", receipt["verdict"]["errors"])
-        self.assertEqual(receipt["verdict"]["summary"]["receipts"], 6)
+        self.assertEqual(receipt["verdict"]["summary"]["receipts"], 7)
 
     def test_get_and_unknown_paths(self):
         status, headers, _ = rpc(self.port, method="GET")
@@ -199,6 +200,7 @@ class TestHttpSubprocess(unittest.TestCase):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                env=controlled_test_env(),
             )
             try:
                 banner = json.loads(proc.stdout.readline())

@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from test_env import controlled_test_env  # noqa: E402
 
 from continuity_receipt import keys  # noqa: E402
 from gate_lite.mcp_server import TOOLS, McpServer  # noqa: E402
@@ -42,6 +43,7 @@ def make_server(state_dir: Path) -> tuple[McpServer, str]:
 def payload(response: dict) -> dict:
     text = response["result"]["content"][0]["text"]
     return json.loads(text)
+
 
 
 class TestMcpInProcess(unittest.TestCase):
@@ -130,7 +132,7 @@ class TestMcpInProcess(unittest.TestCase):
                 )
             )
             self.assertEqual(receipt["verdict"]["verdict"], "TRUSTED", receipt["verdict"]["errors"])
-            self.assertEqual(receipt["verdict"]["summary"]["receipts"], 6)
+            self.assertEqual(receipt["verdict"]["summary"]["receipts"], 7)
 
     def test_status_reports_effective_runner(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -158,7 +160,7 @@ class TestMcpInProcess(unittest.TestCase):
                     }
                 )
             )
-            self.assertEqual(status["runner"]["class"], "stub")
+            self.assertEqual(status["runner"]["class"], "none")
             self.assertTrue(status["runner"]["simulated"])
 
     def test_pass_verify_tool_returns_claims_and_registry(self):
@@ -366,6 +368,7 @@ class TestMcpSubprocess(unittest.TestCase):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                env=controlled_test_env(),
             )
 
             def send(message: dict) -> dict:
@@ -430,9 +433,12 @@ class TestMcpSubprocess(unittest.TestCase):
                 capture_output=True,
                 text=True,
                 timeout=10,
+                env=controlled_test_env(),
             )
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("refusing to start", proc.stderr)
+            self.assertFalse(Path(tmp, "gate.key").exists())
+            self.assertFalse(Path(tmp, "registry.db").exists())
 
     def test_slice_without_runner_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -452,6 +458,7 @@ class TestMcpSubprocess(unittest.TestCase):
                 capture_output=True,
                 text=True,
                 timeout=10,
+                env=controlled_test_env(),
             )
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("requires a runner path", proc.stderr)

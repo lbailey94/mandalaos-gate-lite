@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from continuity_receipt import verify_bundle  # noqa: E402
+from gate_lite.errors import PreflightError  # noqa: E402
 from gate_lite.orchestrator import EmitterError, Orchestrator, build_runner  # noqa: E402
 
 
@@ -27,12 +27,13 @@ def build_orchestrator(args) -> Orchestrator:
             "refusing to exec: no sandbox runner configured (pass --runner <path> "
             "[--slice], or set WM_GATELITE_RUNNER), or pass --demo to run the simulated stub"
         )
-    if runner is None and args.cmd == "exec":
+    orchestrator = Orchestrator(args.state, gate_id=args.gate_id, runner=runner)
+    if runner is None and args.cmd == "exec" and args.demo:
         print(
             "mandala-ctl: warning: simulated execution (stub runner); no sandbox involved",
             file=sys.stderr,
         )
-    return Orchestrator(args.state, gate_id=args.gate_id, runner=runner)
+    return orchestrator
 
 
 def main(argv=None) -> int:
@@ -68,11 +69,9 @@ def main(argv=None) -> int:
     exec_cmd.add_argument("--tenant", required=True)
     exec_cmd.add_argument("--slot", required=True)
     exec_cmd.add_argument("--payload-ref", required=True)
-    exec_cmd.add_argument(
-        "--token",
-        required=True,
-        help="pass token from `pass` (required; binds agent + slot, single use)",
-    )
+    token_input = exec_cmd.add_mutually_exclusive_group(required=True)
+    token_input.add_argument("--token", help="pass token from `pass` (binds agent + slot, single use)")
+    token_input.add_argument("--token-stdin", action="store_true", help="read the pass token from stdin without echoing or logging it")
     exec_cmd.add_argument("--idempotency-key", default=None)
 
     settle = sub.add_parser("settle")
@@ -117,7 +116,18 @@ def main(argv=None) -> int:
     receipt.add_argument("--verdict", action="store_true")
 
     args = parser.parse_args(argv)
-    orch = build_orchestrator(args)
+    token = None
+    if args.cmd == "exec":
+        token = sys.stdin.readline().rstrip("\r\n") if args.token_stdin else args.token
+        if not token:
+            print(json.dumps({"error": "token_required", "detail": "pass token input is empty"}), file=sys.stderr)
+            return 2
+
+    try:
+        orch = build_orchestrator(args)
+    except PreflightError as exc:
+        print(json.dumps(exc.as_dict()), file=sys.stderr)
+        return 3
 
     try:
         if args.cmd == "tenant-add":
@@ -138,7 +148,7 @@ def main(argv=None) -> int:
                 args.slot,
                 args.payload_ref,
                 idempotency_key=args.idempotency_key,
-                token=args.token,
+                token=token,
             )
         elif args.cmd == "settle":
             output = orch.settle(args.tenant, args.slot, args.rail, args.rail_ref, args.minor)
@@ -158,11 +168,18 @@ def main(argv=None) -> int:
             output = orch.list_(args.tenant)
         elif args.cmd == "receipt":
             bundle = orch.receipt(args.task_id)
-            output = verify_bundle(bundle).as_dict() if args.verdict else bundle
+            if args.verdict:
+                from continuity_receipt import verify_bundle
+                output = verify_bundle(bundle).as_dict()
+            else:
+                output = bundle
         else:  # pragma: no cover
             parser.error("unknown command")
     except EmitterError as exc:
         print(json.dumps({"error": str(exc), "code": "emitter_unavailable"}), file=sys.stderr)
+        return 3
+    except PreflightError as exc:
+        print(json.dumps(exc.as_dict()), file=sys.stderr)
         return 3
     except (KeyError, PermissionError, ValueError) as exc:
         print(json.dumps({"error": str(exc)}), file=sys.stderr)

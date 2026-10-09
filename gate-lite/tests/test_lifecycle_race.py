@@ -9,18 +9,21 @@ acceptance criteria from the issue:
   1. no process starts after a terminal or expiry seal;
   2. a pre-start race returns an explicit rejected/unknown outcome and emits
      no `task.execution`;
-  3. receipt ordering is monotonic (decision → execution → termination);
+  3. receipt ordering is monotonic (decision → execution → state commitment
+     → termination);
   4. a kill request is bound to a slot/run generation, so a late start cannot
      consume an old request.
 """
 import os
-import subprocess
+import signal
 import sys
+import subprocess
 import tempfile
 import threading
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -76,6 +79,24 @@ class GatedRunner:
         self.calls = 0
         self.child = None
 
+    def cleanup(self):
+        """Stop and reap only the isolated child process group owned here."""
+        child = self.child
+        if child is None or child.poll() is not None:
+            return
+        try:
+            os.killpg(child.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            child.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(child.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            child.wait(timeout=1)
+
     def run(self, slot, payload_ref, on_spawn=None):
         self.calls += 1
         if self.before_spawn.is_set():
@@ -84,11 +105,8 @@ class GatedRunner:
         pgid = None
         unit = None
         if self.live_pid:
-            # A real child process group journaled with a no-op unit: the
-            # kill path must terminate it through the systemd unit when that
-            # exists, and through the POSIX fallback when it does not
-            # (macOS has no systemctl; 2026-09-27 port report). Never the
-            # test process itself.
+            # This real, isolated child is safe to signal in fallback tests;
+            # never journal the test process as the run target.
             self.child = subprocess.Popen(["sleep", "30"], start_new_session=True)
             pid = self.child.pid
             pgid = os.getpgid(pid)
@@ -142,6 +160,7 @@ class TestLifecycleRace(unittest.TestCase):
                     "session.pass.created",
                     "task.decision",
                     "task.execution",
+                    "state.commitment",
                     "task.termination",
                 ],
                 "termination must follow execution (monotonic receipts)",
@@ -185,6 +204,7 @@ class TestLifecycleRace(unittest.TestCase):
                     "session.pass.created",
                     "task.decision",
                     "task.execution",
+                    "state.commitment",
                     "task.termination",
                 ],
             )
@@ -205,7 +225,7 @@ class TestLifecycleRace(unittest.TestCase):
             self.assertNotIn("kill_signal", executed)
             self.assertEqual(
                 receipt_types(orch, slot_id),
-                ["session.pass.created", "task.decision", "task.execution"],
+                ["session.pass.created", "task.decision", "task.execution", "state.commitment"],
                 "an old-generation request must not terminate a new run",
             )
             self.assertEqual(orch.registry.get_slot(slot_id)["state"], "active")
@@ -230,6 +250,7 @@ class TestLifecycleRace(unittest.TestCase):
     def test_kill_live_run_terminates_after_execution(self):
         with tempfile.TemporaryDirectory() as tmp:
             runner = GatedRunner(live_pid=True)
+            self.addCleanup(runner.cleanup)
             orch, agent = make_orchestrator(Path(tmp), runner)
             issued = orch.pass_("race", agent)
             slot_id = issued["slot_id"]
@@ -241,7 +262,8 @@ class TestLifecycleRace(unittest.TestCase):
             self.assertTrue(wait_until(runner.spawned.is_set))
 
             threading.Timer(0.3, runner.release.set).start()
-            killed = orch.kill("race", slot_id, wait_s=2.0)
+            with patch("gate_lite.orchestrator.shutil.which", return_value=None):
+                killed = orch.kill("race", slot_id, wait_s=2.0)
             thread.join(10)
 
             self.assertEqual(killed["state"], "terminated", killed)
@@ -251,17 +273,54 @@ class TestLifecycleRace(unittest.TestCase):
                     "session.pass.created",
                     "task.decision",
                     "task.execution",
+                    "state.commitment",
                     "task.termination",
                 ],
             )
-            # The journaled process group must actually be gone — the kill
-            # path cannot be a platform-dependent no-op (systemctl on Linux,
-            # POSIX group signal everywhere else).
             self.assertIsNotNone(runner.child)
             self.assertIsNotNone(
                 runner.child.poll(),
-                "the kill path must terminate the journaled process group",
+                "kill must terminate the journaled child process group when systemctl is absent",
             )
+
+    def test_systemctl_nonzero_falls_back_to_journaled_process_group(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            orch, _ = make_orchestrator(Path(tmp), GatedRunner())
+            completed = type("Completed", (), {"returncode": 1})()
+            with patch("gate_lite.orchestrator.shutil.which", return_value="/bin/systemctl"), \
+                    patch("gate_lite.orchestrator.subprocess.run", return_value=completed), \
+                    patch("gate_lite.orchestrator.os.killpg") as killpg:
+                orch._signal_run({"unit": "unavailable.service", "pgid": 456, "pid": 123}, "SIGTERM")
+            killpg.assert_called_once_with(456, signal.SIGTERM)
+
+    def test_systemctl_oserror_falls_back_to_journaled_process_group(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            orch, _ = make_orchestrator(Path(tmp), GatedRunner())
+            with patch("gate_lite.orchestrator.shutil.which", return_value="/bin/systemctl"), \
+                    patch("gate_lite.orchestrator.subprocess.run", side_effect=OSError("unavailable")), \
+                    patch("gate_lite.orchestrator.os.killpg") as killpg:
+                orch._signal_run({"unit": "unavailable.service", "pgid": 987, "pid": 123}, "SIGTERM")
+            killpg.assert_called_once_with(987, signal.SIGTERM)
+
+    def test_successful_systemctl_signal_does_not_fall_back(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            orch, _ = make_orchestrator(Path(tmp), GatedRunner())
+            completed = type("Completed", (), {"returncode": 0})()
+            with patch("gate_lite.orchestrator.shutil.which", return_value="/bin/systemctl"), \
+                    patch("gate_lite.orchestrator.subprocess.run", return_value=completed), \
+                    patch("gate_lite.orchestrator.os.killpg") as killpg, \
+                    patch("gate_lite.orchestrator.os.kill") as kill:
+                orch._signal_run({"unit": "active.service", "pgid": 456, "pid": 123}, "SIGTERM")
+            killpg.assert_not_called()
+            kill.assert_not_called()
+
+    def test_missing_systemctl_falls_back_without_signalling_test_process(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            orch, _ = make_orchestrator(Path(tmp), GatedRunner())
+            with patch("gate_lite.orchestrator.shutil.which", return_value=None), \
+                    patch("gate_lite.orchestrator.os.killpg") as killpg:
+                orch._signal_run({"unit": "unavailable.service", "pgid": 789, "pid": 123}, "SIGKILL")
+            killpg.assert_called_once_with(789, signal.SIGKILL)
 
 
 if __name__ == "__main__":
