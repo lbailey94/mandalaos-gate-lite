@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# mandala-sandbox — portable unprivileged containment for external tools.
+#
+# Host twin of `modules/landlock-isolation.nix` (MandalaOS Sovereign). Same
+# CLI contract:
+#   mandala-sandbox <command> [args...]         # no network (default)
+#   mandala-sandbox --net <command> [args...]   # egress + DNS + CA certs
+#   mandala-sandbox --exec '<json envelope>'    # WM B2 protocol (below)
+#
+# Envelope schema `wm-sandbox-exec-v1`, built by wm-core's SpawnPolicy:
+#   {"schema":"wm-sandbox-exec-v1","program":"gh",
+#    "args":["issue","list"],"net":true}
+# `program`/`args` are executed directly (no shell interpolation); `net`
+# selects the network profile; `workspace` optionally overrides the
+# workspace bind. `rw: true` makes that one bind writable (default read-only).
+# Unknown fields are ignored.
+#
+# Requirements: bubblewrap, jq, coreutils on PATH. NixOS targets should use
+# the packaged wrapper from the module instead.
+#
+# Wire into WM's declared-subprocess spawns via its environment, e.g. a
+# systemd drop-in or the instance env file:
+#   WM_SANDBOX_RUNNER=%h/.local/bin/mandala-sandbox
+set -euo pipefail
+
+with_net=0
+workspace_override=""
+workspace_rw=0
+
+if [ "${1:-}" = "--exec" ]; then
+  envelope="${2:?mandala-sandbox: --exec requires a JSON envelope}"
+  shift 2
+  coproc parsed_stream { jq -j 'if type != "object" or (.program | type) != "string" or .program == "" or (.program | index("\u0000")) != null or (has("args") and (.args | type) != "array") or any((if has("args") then .args else [] end)[]; type != "string" or index("\u0000") != null) or (has("net") and (.net | type) != "boolean") or (has("workspace") and ((.workspace | type) != "string" or (.workspace | index("\u0000")) != null)) or (has("rw") and (.rw | type) != "boolean") then error("invalid sandbox envelope") else ([.program, (if has("net") then .net else false end | tostring), (if has("workspace") then .workspace else "" end), (if has("rw") then .rw else false end | tostring)] + (if has("args") then .args else [] end))[] | ., "\u0000" end' <<<"$envelope"; }
+  mapfile -d '' -t fields <&"${parsed_stream[0]}"
+  # shellcheck disable=SC2154 # Bash assigns this PID for the named coprocess.
+  if ! wait "${parsed_stream_PID}"; then
+    echo "mandala-sandbox: invalid JSON envelope or argument types" >&2
+    exit 64
+  fi
+  program="${fields[0]}"
+  if [ "${fields[1]}" = "true" ]; then
+    with_net=1
+  fi
+  workspace_override="${fields[2]}"
+  if [ "${fields[3]}" = "true" ]; then
+    workspace_rw=1
+  fi
+  exec_args=("${fields[@]:4}")
+  set -- "$program" "${exec_args[@]}"
+elif [ "${1:-}" = "--net" ]; then
+  with_net=1
+  shift
+fi
+
+# HOME may be unbound under systemd (`set -u`) — default to a path that
+# will not exist, so the workspace bind is skipped, not fatal.
+workspace="${workspace_override:-${WM_SANDBOX_WORKSPACE:-${HOME:-/nonexistent}/.local/share/whitemagic/safe_corpus}}"
+
+args=(
+  --ro-bind /usr /usr
+  --ro-bind-try /lib /lib
+  --ro-bind-try /lib64 /lib64
+  --ro-bind-try /nix /nix
+  --ro-bind-try /bin /bin
+  --ro-bind-try /run/current-system /run/current-system
+  --proc /proc
+  --dev /dev
+  --unshare-all
+  --tmpfs /tmp
+  --die-with-parent
+  --setenv WM_SANDBOXED 1
+)
+
+if [ "$with_net" = 1 ]; then
+  # --share-net undoes --unshare-all's net namespace; skipping
+  # --unshare-net is NOT enough (bwrap 0.9 behavior).
+  args+=( --share-net )
+  args+=( --ro-bind-try /run/systemd/resolve /run/systemd/resolve )
+  args+=( --ro-bind-try /etc/resolv.conf /etc/resolv.conf )
+  args+=( --ro-bind-try /etc/hosts /etc/hosts )
+  args+=( --ro-bind-try /etc/nsswitch.conf /etc/nsswitch.conf )
+  args+=( --ro-bind-try /etc/ssl/certs /etc/ssl/certs )
+fi
+
+if [ -e "$workspace" ]; then
+  if [ "$workspace_rw" = 1 ]; then
+    args+=( --bind "$workspace" /workspace )
+  else
+    args+=( --ro-bind "$workspace" /workspace )
+  fi
+elif [ "$workspace_rw" = 1 ]; then
+  echo "mandala-sandbox: writable workspace does not exist" >&2
+  exit 64
+fi
+
+exec bwrap "${args[@]}" -- "$@"

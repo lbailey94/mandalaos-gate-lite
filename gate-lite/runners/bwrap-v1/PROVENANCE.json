@@ -1,0 +1,30 @@
+{
+  "artifact": "mandala-sandbox",
+  "artifact_sha256": "f7da8d6c3809ac5adbc4631c82fb9327abdb69638715bb0ea1493dc79996411e",
+  "source": {
+    "repository": "lbailey94/mandalaos-sovereign",
+    "visibility": "private",
+    "commit": "9a0faf19fbebfd6a4c803822ed23e8ba6cf055b6",
+    "path": "scripts/mandala-sandbox",
+    "local_source_path": "work/mandala-05-integration/gate-lite/runners/bwrap-v1/mandala-sandbox"
+  },
+  "license": {
+    "spdx_id": "MIT",
+    "copyright": "2026 Lucas Bailey",
+    "user_decision_date": "2026-10-08",
+    "scope": "bundled wrapper packet only; not the private Sovereign or Mandala repositories"
+  },
+  "publication": {
+    "status": "published",
+    "repository": "lbailey94/mandalaos-gate-lite",
+    "target_path": "gate-lite/runners/bwrap-v1/mandala-sandbox",
+    "frozen_public_commit": "a843e61c269c1a88704280c287a7944b7e014069",
+    "public_artifact_base_url": "https://raw.githubusercontent.com/lbailey94/mandalaos-gate-lite/a843e61c269c1a88704280c287a7944b7e014069/gate-lite/runners/bwrap-v1/",
+    "note": "frozen_public_commit is the repository commit where the wrapper bytes first landed; it is separate from artifact_sha256."
+  },
+  "candidate_source_commit": "8e84b2520b535d1452d4966d885411ee7aaea47d",
+  "dependencies": {
+    "bwrap_sha256": "e318903862396f96de3df57264e0158682b952fd3fb53ac23d876413e7b30f71",
+    "jq_sha256": "59cfd58d7e470b103aede0e7589cfea929e45ee27f5471f08aa9676ac7bfc566"
+  }
+}
