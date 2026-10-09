@@ -102,6 +102,11 @@ containment hold also refuses real execution with this wrapper: its observed
 Bubblewrap-only behavior cannot honestly use the 0.4 `bwrap-landlock` class.
 These examples show runner selection, not a qualified execution path.
 
+The pinned wrapper used for the reviewed `bwrap-v1` profile is published in
+this repository at `gate-lite/runners/bwrap-v1/` (MIT packet, acquisition ref
+`bwrap-v1-packet`, verify with `sha256sum -c SHA256SUMS`); the
+`~/.local/bin/mandala-sandbox` path above is the historical host install.
+
 ```bash
 WM_GATELITE_RUNNER=~/.local/bin/mandala-sandbox python3 $CTL ...   # bwrap
 WM_GATELITE_SLICE=1 WM_GATELITE_RUNNER=~/.local/bin/mandala-sandbox ...  # + slice quotas (runner required)

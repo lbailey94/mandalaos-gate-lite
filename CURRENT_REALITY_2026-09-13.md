@@ -162,6 +162,9 @@ slice and ships no enforcement.
   a portable host wrapper from the sovereign module. Not yet decided.
   *(Resolved 2026-09-13: wrapper installed + wired; see §8 item 5 and the
   Landlock × runner conflict below.)*
+  *(2026-10-08: the pinned wrapper is also published publicly — MIT packet,
+  `gate-lite/runners/bwrap-v1/`, acquisition ref `bwrap-v1-packet` — for
+  anonymous acquisition and review; the host install remains the local flow.)*
 - **Landlock v0 × subprocess runner: mutually exclusive for namespaces,
   resolved for Landlock stores (2026-09-14).** Landlock denies filesystem
   topology modification (all mounts) while a domain is active; bwrap requires
