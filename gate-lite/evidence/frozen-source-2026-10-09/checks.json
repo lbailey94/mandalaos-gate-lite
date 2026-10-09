@@ -1,0 +1,13 @@
+{
+  "payload_exit_zero": true,
+  "bundle_trusted": true,
+  "cli_verdict_trusted": true,
+  "class_bwrap": true,
+  "wrapper_digest": true,
+  "invocation_digest": true,
+  "commitment_count": true,
+  "commitment_head": true,
+  "settlement_minor_zero": true,
+  "delivery_binds_execution_result": true,
+  "terminated": true
+}

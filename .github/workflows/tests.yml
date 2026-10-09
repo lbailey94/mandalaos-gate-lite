@@ -14,7 +14,12 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install gate-lite + deps (continuity-receipt from PyPI)
-        run: python -m pip install --quiet -e gate-lite continuity-receipt==0.4.0 pytest
+        run: python -m pip install --quiet -e gate-lite continuity-receipt==0.5.0 pytest
+      - name: Check installed dependencies
+        run: python -m pip check
+      - name: Wrapper argv contract (capture shim; no containment claim)
+        working-directory: gate-lite
+        run: python tools/test_sandbox_argv.py -v
       - name: Run gate-lite suite
         working-directory: gate-lite
         run: python -m pytest tests/ -q --junitxml=junit.xml
@@ -27,6 +32,9 @@ jobs:
       - name: Offline verification (captured 0.4 bundle)
         working-directory: gate-lite
         run: continuity-receipt-verify evidence/outsider-2026-09-24-04/bundle-task.json
+      - name: Offline verification (frozen private 0.5 source exercise)
+        working-directory: gate-lite
+        run: continuity-receipt-verify evidence/frozen-source-2026-10-09/bundle-task.json
       - name: Upload junit
         if: always()
         uses: actions/upload-artifact@v4

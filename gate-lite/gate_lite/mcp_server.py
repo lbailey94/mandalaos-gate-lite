@@ -23,15 +23,14 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from continuity_receipt import verify_bundle  # noqa: E402
 from gate_lite.models import SLOT_CLASSES  # noqa: E402
+from gate_lite.errors import PreflightError  # noqa: E402
 from gate_lite.orchestrator import (  # noqa: E402
     EmitterError,
     Orchestrator,
     PassError,
     build_runner,
 )
-from gate_lite.tokens import verify_pass  # noqa: E402
 
 PROTOCOL_VERSION = "2025-06-18"
 SERVER_NAME = "gate-lite-mcp"
@@ -214,10 +213,18 @@ def _tool_error(code: str, detail: str) -> dict:
     }
 
 
+def _preflight_tool_error(error: PreflightError) -> dict:
+    return {
+        "content": [{"type": "text", "text": json.dumps(error.as_dict())}],
+        "isError": True,
+    }
+
+
 class McpServer:
-    def __init__(self, orchestrator: Orchestrator, tenant_id: str):
+    def __init__(self, orchestrator: Orchestrator | None, tenant_id: str, startup_error: PreflightError | None = None):
         self.orch = orchestrator
         self.tenant_id = tenant_id
+        self.startup_error = startup_error
 
     def handle(self, message: dict) -> dict | None:
         method = message.get("method")
@@ -254,6 +261,8 @@ class McpServer:
         }
 
     def _call(self, params: dict) -> dict:
+        if self.startup_error is not None:
+            return _preflight_tool_error(self.startup_error)
         name = params.get("name")
         args = params.get("arguments") or {}
         try:
@@ -273,6 +282,7 @@ class McpServer:
                     )
                 )
             if name == "mandala.pass.verify":
+                from gate_lite.tokens import verify_pass
                 token = args["token"]
                 claims = verify_pass(token, self.orch.gate_did)
                 pass_id = claims.get("pass_id")
@@ -329,6 +339,7 @@ class McpServer:
             if name == "mandala.receipt":
                 bundle = self.orch.receipt(args["task_id"])
                 if args.get("verify"):
+                    from continuity_receipt import verify_bundle
                     return _result({"verdict": verify_bundle(bundle).as_dict(), "bundle": bundle})
                 return _result({"bundle": bundle})
             if name == "mandala.templates":
@@ -344,6 +355,8 @@ class McpServer:
             return _tool_error("unknown_tool", f"no such tool: {name}")
         except EmitterError as exc:
             return _tool_error("emitter_unavailable", str(exc))
+        except PreflightError as exc:
+            return _preflight_tool_error(exc)
         except PassError as exc:
             return _tool_error(exc.code, str(exc))
         except KeyError as exc:
@@ -511,13 +524,27 @@ def main(argv=None) -> int:
             "--slice/WM_GATELITE_SLICE requires a runner path: pass --runner <path> "
             "or set WM_GATELITE_RUNNER"
         )
-    runner = build_runner(runner_path, slice_mode)
+    try:
+        runner = build_runner(runner_path, slice_mode)
+    except PreflightError as exc:
+        # Keep the JSON-RPC loop alive so tools/call returns a structured refusal.
+        server = McpServer(None, args.tenant, startup_error=exc)
+        if args.transport == "http":
+            return serve_http(server, args.host, args.port, args.token)
+        return serve_stdio(server)
     if runner is None and not args.demo:
         parser.error(
             "refusing to start: no sandbox runner configured (pass --runner <path> "
             "[--slice], or set WM_GATELITE_RUNNER), or pass --demo to expose simulated execution"
         )
-    orchestrator = Orchestrator(args.state, gate_id=args.gate_id, runner=runner)
+    try:
+        orchestrator = Orchestrator(args.state, gate_id=args.gate_id, runner=runner)
+    except PreflightError as exc:
+        # Keep the JSON-RPC loop alive so tools/call returns a structured refusal.
+        server = McpServer(None, args.tenant, startup_error=exc)
+        if args.transport == "http":
+            return serve_http(server, args.host, args.port, args.token)
+        return serve_stdio(server)
     server = McpServer(orchestrator, args.tenant)
 
     if args.transport == "http":

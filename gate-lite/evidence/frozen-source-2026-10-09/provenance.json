@@ -1,0 +1,28 @@
+{
+  "source_sha": "8e84b2520b535d1452d4966d885411ee7aaea47d",
+  "source_status": "pushed-frozen",
+  "source_provenance": "operator assertion; not verified by this tool",
+  "disposition": "bounded same-host rehearsal; not independent adoption",
+  "python": "3.12.3",
+  "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+  "dependencies": {
+    "continuity-receipt": "0.5.0",
+    "cryptography": "50.0.2",
+    "cffi": "2.1.1",
+    "pycparser": "3.11"
+  },
+  "wrapper_sha256": "sha256:f7da8d6c3809ac5adbc4631c82fb9327abdb69638715bb0ea1493dc79996411e",
+  "tool_sha256": {
+    "bwrap": "sha256:e318903862396f96de3df57264e0158682b952fd3fb53ac23d876413e7b30f71",
+    "jq": "sha256:59cfd58d7e470b103aede0e7589cfea929e45ee27f5471f08aa9676ac7bfc566"
+  },
+  "verifier": "Python reference; CLI/API share implementation",
+  "commitment_capture": "observed Registry.reload snapshot supplied to original _state_commitment",
+  "external_delivery_attestation": "absent; issuer records its own result binding",
+  "scope_excluded": [
+    "independent adoption",
+    "hostile-tenant isolation",
+    "payment qualification",
+    "issuer honesty"
+  ]
+}

@@ -1,13 +1,21 @@
 """Acceptance tests G2/G3/G6/G8 + snapshot, on the real containment wrapper.
 
-G2 quota kill (systemd slice), G3 egress deny (bwrap netns), G6 operator kill,
-G8 fail-closed emitter. Real-runner tests skip when the host lacks bwrap /
-mandala-sandbox / a running systemd user manager.
+The normal unit suite skips real payload cases. To opt into plain bwrap
+acceptance, run this from ``gate-lite``::
+
+    GATE_LITE_REAL_RUNNER_TESTS=1 WM_GATELITE_RUNNER=/exact/path/mandala-sandbox python -m unittest discover -s tests -p test_acceptance.py -v
+
+This fails at test setup unless the wrapper, bwrap, and jq digests match the
+reviewed profile.
+
+Systemd quota cases, including the memory/OOM drill, additionally require
+``GATE_LITE_QUOTA_TESTS=1`` and a running systemd user manager. Without the real
+runner opt-in, tests skip with that opt-in named; without quota opt-in, only
+quota cases skip; with quota opt-in but no usable user manager, they report the
+systemd prerequisite.
 """
 import json
 import os
-import shutil
-import subprocess
 import sys
 import tempfile
 import threading
@@ -27,31 +35,10 @@ from gate_lite.orchestrator import (  # noqa: E402
     SandboxRunner,
     SliceRunner,
 )
+from acceptance_policy import acceptance_policy  # noqa: E402
 
-WRAPPER = (
-    os.environ.get("WM_GATELITE_RUNNER")
-    or shutil.which("mandala-sandbox")
-    or str(Path.home() / ".local" / "bin" / "mandala-sandbox")
-)
-HAS_SANDBOX = Path(WRAPPER).exists() and shutil.which("bwrap") is not None
-# These integration cases execute real payloads. They stay disabled while no
-# exact runner build has a reviewed profile for the pinned receipt vocabulary.
-HAS_QUALIFIED_RUNNER_PROFILE = False
-
-
-def systemd_user_ok() -> bool:
-    if not (shutil.which("systemd-run") and shutil.which("systemctl")):
-        return False
-    try:
-        probe = subprocess.run(
-            ["systemctl", "--user", "is-system-running"], capture_output=True, text=True, timeout=5
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return False
-    return probe.stdout.strip() in ("running", "degraded")
-
-
-HAS_SYSTEMD = systemd_user_ok()
+POLICY = acceptance_policy()
+WRAPPER = POLICY.runner_path or ""
 
 
 def make_orchestrator(state: Path, runner=None) -> tuple[Orchestrator, str]:
@@ -75,6 +62,75 @@ class SpyRunner:
     def run(self, slot, payload_ref, on_spawn=None) -> ExecResult:
         self.calls += 1
         return ExecResult(exit_code=0, stdout_hash="sha256:spy", resources={}, egress=[])
+
+
+class TestStateCommitmentFailure(unittest.TestCase):
+    """A post-execution commitment failure must hold the slot against replay."""
+
+    def test_commitment_emitter_failure_is_terminal_and_never_returns_success(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            runner = SpyRunner()
+            orch, agent = make_orchestrator(state, runner=runner)
+            issued = orch.pass_("dogfood", agent)
+            original_emit = orch._emit
+
+            def fail_commitment(slot, record_type, body):
+                if record_type == "state.commitment":
+                    raise EmitterError("injected failure after task.execution")
+                return original_emit(slot, record_type, body)
+
+            orch._emit = fail_commitment
+            with self.assertRaisesRegex(EmitterError, "injected failure"):
+                orch.exec_(
+                    "dogfood",
+                    issued["slot_id"],
+                    "fixed payload",
+                    idempotency_key="commitment-failure",
+                    token=issued["token"],
+                )
+
+            self.assertEqual(runner.calls, 1)
+            self.assertEqual(orch.status("dogfood", issued["slot_id"])["slot"]["state"], "receipt_incomplete")
+            self.assertIsNone(orch.registry.recall(f"exec:dogfood:{issued['slot_id']}:commitment-failure"))
+            bundle = orch.receipt(orch.task_id_for(issued["slot_id"]))
+            self.assertEqual(
+                [receipt["type"] for receipt in bundle["receipts"]],
+                ["session.pass.created", "task.decision", "task.execution"],
+            )
+
+            orch._emit = original_emit
+            with self.assertRaisesRegex(ValueError, "slot is receipt_incomplete"):
+                orch.exec_(
+                    "dogfood",
+                    issued["slot_id"],
+                    "fixed payload",
+                    idempotency_key="commitment-failure",
+                    token=issued["token"],
+                )
+            self.assertEqual(runner.calls, 1)
+
+    def test_commitment_snapshot_failure_is_terminal_after_execution(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runner = SpyRunner()
+            orch, agent = make_orchestrator(Path(tmp), runner=runner)
+            issued = orch.pass_("dogfood", agent)
+
+            def fail_snapshot():
+                raise RuntimeError("snapshot failed")
+
+            orch._state_commitment = fail_snapshot
+
+            with self.assertRaisesRegex(RuntimeError, "snapshot failed"):
+                orch.exec_("dogfood", issued["slot_id"], "fixed payload", token=issued["token"])
+
+            self.assertEqual(runner.calls, 1)
+            self.assertEqual(orch.status("dogfood", issued["slot_id"])["slot"]["state"], "receipt_incomplete")
+            bundle = orch.receipt(orch.task_id_for(issued["slot_id"]))
+            self.assertEqual(
+                [receipt["type"] for receipt in bundle["receipts"]],
+                ["session.pass.created", "task.decision", "task.execution"],
+            )
 
 
 @unittest.skipIf(os.geteuid() == 0, "chmod-based fault injection is bypassed by root")
@@ -152,7 +208,7 @@ class TestOperatorKillIdle(unittest.TestCase):
             self.assertEqual(verify_bundle(bundle).verdict, "TRUSTED")
 
 
-@unittest.skipUnless(HAS_SANDBOX and HAS_QUALIFIED_RUNNER_PROFILE, "runner profile is not qualified")
+@unittest.skipUnless(POLICY.runner_enabled, POLICY.runner_skip_reason or "real runner acceptance tests disabled")
 class TestOperatorKillLive(unittest.TestCase):
     """G6: kill a live sandboxed run within N seconds; receipt `operator`."""
 
@@ -203,7 +259,7 @@ class TestOperatorKillLive(unittest.TestCase):
             self.assertEqual(verify_bundle(bundle).verdict, "TRUSTED")
 
 
-@unittest.skipUnless(HAS_SANDBOX and HAS_QUALIFIED_RUNNER_PROFILE, "runner profile is not qualified")
+@unittest.skipUnless(POLICY.runner_enabled, POLICY.runner_skip_reason or "real runner acceptance tests disabled")
 class TestEgressDeny(unittest.TestCase):
     """G3: undeclared egress denied + recorded; no reachability."""
 
@@ -228,7 +284,6 @@ class TestEgressDeny(unittest.TestCase):
             self.assertEqual(egress[0]["destination"], "undeclared")
             self.assertFalse(egress[0]["allowed"])
             self.assertEqual(egress[0]["bytes"], 0)
-            self.assertTrue(egress[0]["enforced"])
 
     def test_declared_but_unpermitted_destination_denied(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -251,16 +306,12 @@ class TestEgressDeny(unittest.TestCase):
             self.assertEqual(egress[0]["destination"], "example.com")
             self.assertFalse(egress[0]["allowed"])
             self.assertEqual(egress[0]["bytes"], 0)
-            self.assertTrue(egress[0]["enforced"])
             orch.terminate("dogfood", issued["slot_id"])
             bundle = orch.receipt(orch.task_id_for(issued["slot_id"]))
             self.assertEqual(verify_bundle(bundle).verdict, "TRUSTED")
 
 
-@unittest.skipUnless(
-    HAS_SANDBOX and HAS_SYSTEMD and HAS_QUALIFIED_RUNNER_PROFILE,
-    "runner profile is not qualified",
-)
+@unittest.skipUnless(POLICY.quota_enabled, POLICY.quota_skip_reason or "systemd quota acceptance tests disabled")
 class TestQuotaKill(unittest.TestCase):
     """G2: quota overrun kills the slot (not the host); termination `quota`."""
 
@@ -276,8 +327,8 @@ class TestQuotaKill(unittest.TestCase):
 
     @unittest.skipUnless(
         os.environ.get("GATE_LITE_QUOTA_TESTS") == "1",
-        "intentionally trips the kernel OOM killer (host notification noise); "
-        "set GATE_LITE_QUOTA_TESTS=1 to run",
+        "intentionally trips the kernel OOM killer; set GATE_LITE_QUOTA_TESTS=1 (with "
+        "GATE_LITE_REAL_RUNNER_TESTS=1 and a ready systemd user manager) to run",
     )
     def test_memory_overrun_kills_slot(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -311,7 +362,7 @@ class TestQuotaKill(unittest.TestCase):
             self.assertEqual(verify_bundle(bundle).verdict, "TRUSTED")
 
 
-@unittest.skipUnless(HAS_SANDBOX and HAS_QUALIFIED_RUNNER_PROFILE, "runner profile is not qualified")
+@unittest.skipUnless(POLICY.runner_enabled, POLICY.runner_skip_reason or "real runner acceptance tests disabled")
 class TestWorkspaceRoundtrip(unittest.TestCase):
     """G7: runner-written artifacts land in the slot workspace, survive snapshot/restore."""
 

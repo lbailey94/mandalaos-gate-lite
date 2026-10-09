@@ -1,0 +1,4 @@
+[
+  "--exec",
+  "{\"schema\": \"wm-sandbox-exec-v1\", \"program\": \"echo\", \"args\": [\"hello\", \"from\", \"gate-lite\", \"0.5\", \"rehearsal\"], \"net\": false, \"workspace\": \"/tmp/mandala-05-capture-617jdkoz/state/workspaces/slot-98b0c0caede0\", \"rw\": true}"
+]

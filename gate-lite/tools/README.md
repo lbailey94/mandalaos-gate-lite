@@ -1,4 +1,23 @@
-# Gate-lite runner qualification probes
+# Gate-lite evidence and qualification tools
+
+For the selective 0.5 candidate, `capture_outsider_05.py` runs a token-safe,
+bounded CLI lifecycle and exports its exact commitment inputs. Source SHA/status
+are operator assertions; verify remote/export identity separately. Use
+[protocol v2](../../GATE_LITE_OUTSIDER_EXERCISE.md) and retain raw signed evidence.
+
+`make_vectors.py --spec 0.5 --out <new-directory>` creates a separately labeled
+synthetic corpus. It also supports explicit 0.4 generation into a separate
+directory. Committed `vectors/` remain historical 0.4 compatibility fixtures;
+the generator refuses to overwrite that directory. No-argument generation is
+intentionally refused.
+
+`test_sandbox_argv.py` adapts the Bubblewrap subset of private Sovereign tests
+at `9a0faf19fbebfd6a4c803822ed23e8ba6cf055b6`. It uses the included byte-identical
+wrapper and fake bwrap capture, testing argument bytes, workspace flags and
+malformed/partial-input refusal without claiming containment. The packet itself
+is unchanged; test adaptation attribution is in [NOTICE.md](../../NOTICE.md).
+
+## Fixed mechanism probe
 
 `qualify_bwrap_runner.py` is a bounded, fixed-payload candidate probe for the
 portable `mandala-sandbox` wrapper. It accepts no payload argument. The only

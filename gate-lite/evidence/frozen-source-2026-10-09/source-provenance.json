@@ -1,0 +1,9 @@
+{
+  "source_sha": "8e84b2520b535d1452d4966d885411ee7aaea47d",
+  "source_visibility": "private; fetched using authorized collaborator access",
+  "remote_branch": "codex/gate-lite-05-profile",
+  "method": "fresh depth-1 fetch from origin; archive of verified FETCH_HEAD",
+  "archive_sha256": "19d66b43cc7f6efcc1ca7de37a2ae98900166dc0e11a59d8e5c61ced55c04588",
+  "ci_run": "https://github.com/lbailey94/mandala-os/actions/runs/37872710238",
+  "ci_qualification": "candidate commit; no merged tree"
+}

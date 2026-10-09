@@ -102,7 +102,7 @@ class TestGateLite(unittest.TestCase):
             self.assertEqual(result.verdict, "TRUSTED", result.errors)
             self.assertEqual(
                 result.summary["types"],
-                ["session.pass.created", "task.decision", "task.execution", "task.termination"],
+                ["session.pass.created", "task.decision", "task.execution", "state.commitment", "task.termination"],
             )
 
     def test_receipt_persisted_and_pass_token_roundtrips(self):
@@ -148,7 +148,7 @@ class TestGateLite(unittest.TestCase):
             orch, agent_did = make_orchestrator(Path(tmp))
             issued = orch.pass_("dogfood", agent_did)
             status = orch.status("dogfood", issued["slot_id"])
-            self.assertEqual(status["runner"]["class"], "stub")
+            self.assertEqual(status["runner"]["class"], "none")
             self.assertTrue(status["runner"]["simulated"])
 
 

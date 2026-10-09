@@ -1,9 +1,38 @@
 # Review notes (one page)
 
 You are reviewing a curated snapshot. Everything runs offline; start with the
-commands in `README.md` §4. Priorities, in the maintainer's order:
+commands in [README.md](README.md#run-and-review). Priorities, in the maintainer's order:
 
-## What changed in this revision (2026-09-24)
+## Selective 0.5 candidate (2026-10-09)
+
+Review the diff from public `75ebbd6`, not the whole private repository. The
+accepted private source is `8e84b25`; the wrapper packet remains frozen at
+`1357c14`. This local port preserves historical evidence and fixtures, public
+POSIX kill fallback and honest whole-network egress metadata. It adds the exact
+0.5.0 dependency, structured startup refusals, stdin token input, the exact bwrap
+profile, state commitments, and durable cross-restart issuer result binding.
+The public imported-runtime/metadata guard is retained and regression tested.
+
+Review priorities:
+
+- Are authorization, token consumption, preflight, replay, lifecycle and
+  commitment-failure ordering preserved, including concurrent/restart cases?
+- Do class/profile and egress statements match actual wrapper behavior without
+  implying Landlock, a VM, destination filtering or hostile-tenant safety?
+- Are the explicit version/output generator and new corpus labels consistent,
+  with committed historical fixtures and signed captures byte-identical?
+- Can a reader distinguish the accepted private frozen-source evidence from
+  the public port's own later exact-commit checks and publication status?
+- Do capture artifacts exclude private runtime state, signing keys and tokens,
+  while preserving exact signed/commitment-bound bytes?
+
+Protocol v2 and the [integration contract](gate-lite/INTEGRATION_CONTRACT.md)
+state the limits. The evidence under `frozen-source-2026-10-09` belongs to the
+private pin; it is not proof of public-port execution. Open gates include quota
+wall/OOM, independent adoption, payment qualification, external delivery
+attestation, hostile-tenant isolation and VM containment.
+
+## Historical revision notes (2026-09-24)
 
 - The current review code pin is private `mandala-os` `033e5ce`. Its clean
   export emits spec 0.4, passed 86 tests, and produced a real-runner bundle
