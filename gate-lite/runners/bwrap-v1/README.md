@@ -14,8 +14,11 @@ license.
 
 ## Acquire and verify
 
-Fetch the packet at the published tag (or the `frozen_public_commit` recorded in
-`PROVENANCE.json`, which pins the executable bytes):
+Fetch the complete packet at the published tag (`bwrap-v1-packet`, pinned
+commit `1357c147410e2471872cb0658d93199457461e65`). Note: the
+`frozen_public_commit` recorded in `PROVENANCE.json` (`a843e61c…`) marks where
+the executable bytes first landed and does **not** contain `PROVENANCE.json` or
+`SHA256SUMS`; use it only for the executable-bytes identity.
 
 ```sh
 REF='bwrap-v1-packet'
@@ -35,6 +38,14 @@ sha256sum mandala-sandbox        # must print f7da8d6c…96411e
 ```sh
 export WM_GATELITE_RUNNER="$PWD/mandala-sandbox"
 ```
+
+## Qualification boundary
+
+This wrapper is qualified only within the private 0.5 candidate lane (candidate
+source commit `8e84b2520b535d1452d4966d885411ee7aaea47d`, bounded same-host
+evidence). The public 0.4 runtime still refuses this wrapper (no reviewed
+runner profile for it); publishing 0.5 is a separate change. Nothing here is
+independent adoption, quota qualification, or hostile-tenant/VM containment.
 
 ## Runtime requirements and limits
 
