@@ -14,11 +14,12 @@ license.
 
 ## Acquire and verify
 
-Use the frozen public commit recorded in `PROVENANCE.json`:
+Fetch the packet at the published tag (or the `frozen_public_commit` recorded in
+`PROVENANCE.json`, which pins the executable bytes):
 
 ```sh
-COMMIT='<frozen public commit from PROVENANCE.json>'
-BASE="https://raw.githubusercontent.com/lbailey94/mandalaos-gate-lite/$COMMIT/gate-lite/runners/bwrap-v1"
+REF='bwrap-v1-packet'
+BASE="https://raw.githubusercontent.com/lbailey94/mandalaos-gate-lite/$REF/gate-lite/runners/bwrap-v1"
 
 mkdir -p mandala-bwrap-v1 && cd mandala-bwrap-v1
 for f in LICENSE README.md SOURCE-ATTRIBUTION.md PROVENANCE.json SHA256SUMS mandala-sandbox; do
