@@ -1,156 +1,118 @@
-# MandalaOS — gate-lite public-review snapshot
+# MandalaOS — gate-lite 0.5 review candidate
 
-Status date: 2026-10-01. This is a curated, review-only snapshot of one slice
-of the MandalaOS project. It is not a release and does not represent the whole
-system.
+Status: local selective port prepared for independent review, 2026-10-09.
+Public main at `75ebbd6d9fd96bc2b6b33e939970449be97027f3` remains the 0.4
+review snapshot until this port is reviewed and published. This repository
+contains one slice of MandalaOS; it is not a release of the whole system.
 
-Project site and discovery surfaces: https://www.whitemagic.dev
+Gate-lite issues governed passes to cooperating agents, supervises a bounded
+execution, and emits signed Continuity Receipts. It exposes a CLI and MCP
+stdio or loopback HTTP. Project site: https://www.whitemagic.dev.
 
-## 0. Provenance of this revision
+## Source and evidence boundaries
 
-- **Current curated source pin:** `0eeac42` (public branch). It pins
-  `continuity-receipt==0.4.0` and checks that imported runtime version matches
-  installed distribution metadata before gate-lite starts. Real execution is
-  held for configured runners reported as `unknown` / `unqualified`; exec
-  refuses before token consumption or payload spawn. See
-  `gate-lite/INTEGRATION_CONTRACT.md` for the current boundary.
-- **Historical exercise:** private `mandala-os` `033e5ce` had 86 tests green
-  on a clean export and produced a real-runner 0.4 bundle that verified
-  `TRUSTED`. That evidence applies to its recorded source pin and environment,
-  not the current curated source. See
-  `gate-lite/evidence/outsider-2026-09-24-04/REPORT.md`.
-- **Historical tested code pin:** `ac078e2`, exercised with receipt spec 0.3.
-  Its evidence remains under `gate-lite/evidence/outsider-2026-09-24/` and
-  must retain that version label.
-- **Claim boundary:** the outsider exercise was a **same-host clean-export
-  reproduction by a collaborator with a pre-existing runner — not an
-  unassisted stranger install**. A genuinely new tester on another machine
-  remains a separate gate; this snapshot must not be read as that.
-- **2026-09-30 egress-truth port:** `parse_payload` entries now carry a
-  per-entry `"enforced"` flag. A granted egress is whole-network; the declared
-  destinations are recorded intent, not an allowlist. Ported from private
-  `mandala-os` `0b6929f`; see `design/EGRESS_ENFORCEMENT_2026-09-30.md`. This
-  slice is vocabulary and documentation only — destination enforcement is not
-  added.
-- This snapshot uses receipt revision `continuity-receipt/0.4`; the published
-  package has since advanced to 0.5.0. This source intentionally stays pinned
-  to 0.4.0 until a separate reviewed port. The format source is
-  `github.com/lbailey94/continuity-receipt` (also on PyPI). This
-  snapshot **does not vendor the verifier** — it installs the published
-  package as a dependency.
+This candidate selectively ports the accepted private source
+`8e84b2520b535d1452d4966d885411ee7aaea47d` onto public main `75ebbd6…`.
+It preserves the public lifecycle and egress behavior and the historical signed
+evidence. The receipt dependency is exactly `continuity-receipt==0.5.0`;
+startup checks distribution metadata, imported runtime version, and spec support
+before creating state. The verifier is installed from PyPI, not vendored.
 
-## 1. What this is
+The accepted private frozen-source exercise fetched that pushed source and the
+complete public wrapper packet at
+`1357c147410e2471872cb0658d93199457461e65` separately. Its seven-receipt bundle
+verified TRUSTED; independent recomputation checked commitment, invocation,
+wrapper, stdout and issuer delivery bindings. Clean and configured suites each
+passed 131 tests with 6 explicit skips; real Bubblewrap acceptance passed 10
+with 2 quota skips; wrapper argv tests passed 6. That is bounded same-host
+reproduction by collaborators. It does not qualify another host or establish
+that this selective public port has passed review. The preserved capture and
+its limits are in [the evidence report](gate-lite/evidence/frozen-source-2026-10-09/REPORT.md).
 
-The **gate-lite** slice of MandalaOS: a governed-pass orchestrator that grants a
-time/CPU/spend-bounded pass to a cooperating agent, supervises execution inside
-a contained slot, and emits a **Continuity Receipt** bundle covering the full
-task arc:
+The port's own exact-commit checks are recorded separately during review.
+Independent port review and the publication decision remain open. The earlier
+October 8 capture at `8ea8c7e` remains local-reviewed, pre-push; it is not
+relabeled as the later frozen-source exercise. Historical 0.3 and 0.4 bundles,
+raw transcripts, and the committed 0.4 vectors retain their original bytes and
+labels.
 
-decision → authority → execution → delivery → termination → settlement
+## What the candidate changes
 
-Receipts are Ed25519-signed hash-chained records (`continuity-receipt/0.4`)
-checked by the published reference verifier. Operations: pass, exec, settle,
-terminate, kill, snapshot, restore, sweep. Control surfaces: a `mandala-ctl`
-CLI and an MCP server (stdio + loopback HTTP/SSE).
+- New bundles use `continuity-receipt/0.5`, including a `state.commitment`
+  over the exact registry snapshot consumed by the commitment method.
+  Commitment failure after execution leaves a visible `receipt_incomplete`
+  hold rather than a retryable success.
+- Real execution accepts only the reviewed `bwrap-v1` wrapper and exact
+  Bubblewrap/jq identities. Unknown or changed identities fail before token
+  consumption or payload spawn. The profile reports `locally_qualified` and
+  `bwrap`; it establishes neither Landlock nor a VM boundary.
+- CLI token input supports `--token-stdin`. Preflight failures are structured
+  through CLI and MCP. Settlement after restart binds the issuer's delivery
+  response to the persisted execution stdout digest. A pre-execution settlement
+  retains the explicit `sha256("none")` sentinel.
+- Ordinary tests isolate ambient runner settings. Real-runner acceptance and
+  wall/OOM quota drills each require explicit opt-in. Vector generation uses
+  an explicit spec and a separate output directory; it cannot overwrite the
+  committed historical corpus.
 
-## 2. Honest status (2026-09-24)
+## Run and review
 
-| Claim | State |
-|---|---|
-| P0 slice | built and exercised end-to-end |
-| Historical acceptance G1–G8 | Recorded for the historical exercise; current real execution remains held |
-| Current test suite | **103 passed, 6 explicit runner-dependent skips** (fresh exact 0.4.0 environment, 2026-10-01) |
-| Authorization | tenant membership at issuance; required single-use token at exec; durable atomic replay (restart + concurrent requests); idempotency cache is authorization-first and tenant/slot scoped |
-| Runner hold | Configured runners report `unknown` / `unqualified`; real exec refuses before token consumption or payload spawn. `--demo` is simulated execution only |
-| Historical outsider exercise | PASS 2026-09-24 against private source pin `033e5ce` (clean export, real runner, bundle TRUSTED offline); this same-host reproduction does not qualify current source or an independent host |
-| Receipts | Current curated source requires exact `continuity-receipt==0.4.0`, checks imported runtime against distribution metadata, and emits spec `0.4` (no vendored copy) |
-| Historical dogfood | 33/33 checks on the real bwrap runner + systemd slices (2026-09-18 evidence; historical environment) |
-| Benchmark | 14/14 invariants, pre- and post-SQLite registry fix (2026-09-18 evidence) |
-| Containment | The design is shared-kernel; current configured runners are held as `unknown` / `unqualified`. A Bubblewrap-only observation is not reported as `bwrap-landlock` |
-| Untrusted multi-tenant | **never sold as this** — that is gate-hard (microVM floor, not built) |
-
-Claim labels are used deliberately: "built and exercised", not "production".
-Evidence summaries, both benchmark reports, and the outsider exercise report
-(with its friction log) are under `gate-lite/evidence/`; the working state and
-known deviations are in `gate-lite/HANDOFF_2026-09-18.md` §9–§11 and
-`design/GATE_LITE_ORCHESTRATOR_CONTRACT_2026-09-17.md` §14.
-For a new project integration, start with
-`gate-lite/INTEGRATION_CONTRACT.md`.
-
-## 3. What is not here yet, and why
-
-- **Gate-hard microVM floor** (KVM microVM per mandala, for untrusted tenants).
-  Requires dedicated / bare-metal hosts; cheap VPS tiers have no nested
-  virtualization. Design: `design/MULTI_TENANT_UNTRUSTED_V0_2_2026-09-17.md`.
-- **WM-store + karma-ledger integration.** The orchestrator currently uses an
-  indexed SQLite registry; migrating to the WhiteMagic store/ledger is a later
-  integration choice, not a scaling need.
-- **External anchor issuance.** Policy decided 2026-09-18: OpenTimestamps is
-  the recommended default; public-chain anchors remain an optional peer type.
-  The issuance step is not wired into gate-lite, and proof verification lives
-  in the spec repo. Policy: the public spec repo's `ANCHORING.md`.
-- **Slice/systemd mode and MCP transports** are covered by the test suite and
-  the 2026-09-18 dogfood/benchmark evidence, but were not part of either
-  2026-09-24 clean-export exercise (real runner only, by design).
-
-## 4. How to run
-
-From the snapshot root:
+From the repository root, with Python 3.11+:
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -e gate-lite          # pulls continuity-receipt from PyPI
+.venv/bin/pip install -e gate-lite
+.venv/bin/pip check
 cd gate-lite
 ../.venv/bin/python -m unittest discover -s tests -v
+../.venv/bin/python tools/test_sandbox_argv.py -v
 ../.venv/bin/continuity-receipt-verify vectors/02_happy_full.json
-# verify the captured outsider bundle offline
-../.venv/bin/continuity-receipt-verify evidence/outsider-2026-09-24-04/bundle-task.json
-# historical spec 0.3 exercise, verified with a compatible verifier
-../.venv/bin/continuity-receipt-verify evidence/outsider-2026-09-24/bundle-task-*.json
+../.venv/bin/continuity-receipt-verify evidence/frozen-source-2026-10-09/bundle-task.json
 ```
 
-Requires Python 3.11+. The real sandboxed execution path additionally needs
-the external `mandala-sandbox` wrapper (Sovereign Edition:
-`mandalaos-sovereign/modules/landlock-isolation.nix`) plus `bubblewrap`;
-slice mode needs a systemd user session. See `gate-lite/README.md` for
-CLI/MCP usage and `GATE_LITE_OUTSIDER_EXERCISE.md` for the exercise protocol.
+The vectors command above checks historical 0.4 compatibility. The captured
+0.5 bundle is evidence for its private source pin, not proof of current port
+execution. Use [protocol v2](GATE_LITE_OUTSIDER_EXERCISE.md) to exercise a fresh,
+exact source export and capture new evidence. CLI/MCP examples and opt-ins are
+in [gate-lite/README.md](gate-lite/README.md); adapter requirements are in
+[INTEGRATION_CONTRACT.md](gate-lite/INTEGRATION_CONTRACT.md).
 
-## 5. Relationship to the public repositories
+The MIT wrapper packet is publicly available at
+[gate-lite/runners/bwrap-v1](gate-lite/runners/bwrap-v1/README.md). Its executable
+SHA-256 is `f7da8d6c3809ac5adbc4631c82fb9327abdb69638715bb0ea1493dc79996411e`.
+The complete exercised packet commit is `1357c147…`; tag `bwrap-v1-packet` is a
+convenience reference. That packet's private-upstream boundary and attribution
+stay intact. Host Bubblewrap and jq builds must also match the reviewed profile;
+changing builds requires a new reviewed profile.
 
-- **continuity-receipt** — the receipt format and reference verifier are
-  published separately at github.com/lbailey94/continuity-receipt (Apache-2.0;
-  also on PyPI). The format's current published revision is
-  `continuity-receipt/0.4` (reference verifier supports 0.1–0.4). This snapshot
-  installs the package from PyPI and does not vendor it.
-- **WhiteMagic** — the governance/memory core:
-  github.com/lbailey94/whitemagic (MIT).
-- **mandalaos-sovereign** and **lakshmi** — remain **private for now**; they
-  are not part of this snapshot.
+## Limits
 
-## 6. AI-assisted development disclosure
+This is shared-kernel Bubblewrap containment for cooperative workloads.
+`--demo` is explicit simulation and receipts use class `none`. Egress is
+network-isolated by default. Granting `net: true` with declared destinations
+shares the whole network; the destinations describe intent and carry
+`enforced: false`. Destination-level enforcement and the separate L2 proxy
+profile are outside this port.
 
-The human maintainer (Lucas Bailey) is accountable for all content here. AI
-collaborators worked under his direction on implementation, tests, benchmarks,
-and documentation. Every status claim above is tied to a runnable test or
-captured evidence in this tree; review them as such.
+TRUSTED checks the signed chain and protocol/policy consistency. It does not
+prove issuer honesty, actual containment, or factual delivery. The issuer's
+stdout binding is not an external delivery attestation, and a $0 invoice flow
+is not payment qualification. Wall/OOM quota qualification, independent
+adoption, payment qualification, external delivery attestation, hostile-tenant
+isolation, and VM containment remain open. Older dogfood and benchmark results
+apply to their historical environments.
 
-## 7. Starting point for a no-context review
+## Project and licensing boundaries
 
-`implementation/AI_BRIEFING_2026-09-15.md` is a self-contained briefing written
-for a reviewer with no prior context; `REVIEW_NOTES.md` lists the specific
-questions the maintainer most wants examined, plus what changed in this
-revision.
+[Continuity Receipt](https://github.com/lbailey94/continuity-receipt) is the
+separate Apache-2.0 receipt format and reference implementation.
+[WhiteMagic](https://github.com/lbailey94/whitemagic) provides memory and
+governance. Neither requires gate-lite. The Sovereign and Lakshmi repositories
+remain private; this snapshot does not distribute them. Repository code is MIT;
+the wrapper uses its adjacent packet-scoped MIT license. See [NOTICE.md](NOTICE.md).
 
-## 8. The stack
-
-> Local memory → governed execution → verifiable continuity
-
-- [`whitemagic`](https://github.com/lbailey94/whitemagic) — local-first memory and session continuity for AI agents
-- [`continuity-receipt`](https://github.com/lbailey94/continuity-receipt) — portable, offline-verifiable evidence for governed tasks (Apache-2.0)
-- [`mandalaos-gate-lite`](https://github.com/lbailey94/mandalaos-gate-lite) — bounded agent execution that emits receipts (this review snapshot)
-- [`whitemagic-plugins`](https://github.com/lbailey94/whitemagic-plugins) — client integrations and adapters
-
-Each repository stands on its own: WhiteMagic does not require MandalaOS, and
-Continuity Receipt does not require WhiteMagic. Three entrances — **use it** →
-`whitemagic`; **review a protocol** → `continuity-receipt`; **attack the
-security architecture** → `mandalaos-gate-lite`.
+The human maintainer, Lucas Bailey, is accountable for the content. AI
+collaborators worked under his direction; implementation and claims remain
+subject to review. Start with [REVIEW_NOTES.md](REVIEW_NOTES.md) for the review
+map. Older dated design and status documents describe their recorded scopes;
+this README describes the candidate under review.

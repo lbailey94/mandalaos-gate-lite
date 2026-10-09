@@ -1,5 +1,12 @@
 # MandalaOS — Current Reality (2026-09-13)
 
+> **Gate-lite candidate scope, 2026-10-09:** this document retains the historical
+> whole-project status below. The selective public 0.5 candidate and its evidence
+> boundaries are described in [README.md](README.md). Public main at `75ebbd6`
+> still has the 0.4 runtime hold until independent port review and publication.
+> The public wrapper packet is available; it does not distribute the private
+> Sovereign repository or establish VM/hostile-tenant qualification.
+
 **Status:** canonical status + supersession map, written after a synthesis pass
 over the 2026-04→09 plan corpus. When a plan contradicts this doc, this doc
 wins — and the plan should carry a banner pointing here.

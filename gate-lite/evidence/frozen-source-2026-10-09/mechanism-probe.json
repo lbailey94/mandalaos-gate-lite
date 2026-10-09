@@ -1,0 +1,131 @@
+{
+  "bwrap": {
+    "digest_pinned": true,
+    "expected_sha256": "sha256:e318903862396f96de3df57264e0158682b952fd3fb53ac23d876413e7b30f71",
+    "path": "/usr/bin/bwrap",
+    "sha256": "sha256:e318903862396f96de3df57264e0158682b952fd3fb53ac23d876413e7b30f71",
+    "version_argv": [
+      "/usr/bin/bwrap",
+      "--version"
+    ],
+    "version_exit_code": 0,
+    "version_output": "bubblewrap 0.9.0"
+  },
+  "classification_status": "OPEN",
+  "conclusion": "OPEN",
+  "identity_stable_after_probe": true,
+  "invocation": {
+    "argv": [
+      "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/anonymous-wrapper/mandala-sandbox",
+      "--exec",
+      "{\"schema\":\"wm-sandbox-exec-v1\",\"program\":\"/usr/bin/python3\",\"args\":[\"-c\",\"exec(__import__('base64').b64decode('aW1wb3J0IGpzb24sIG9zLCBwYXRobGliLCB0ZW1wZmlsZQpkZWYgbW91bnRfaW5mbyhwYXRoKToKICAgIGZvciBsaW5lIGluIHBhdGhsaWIuUGF0aCgiL3Byb2Mvc2VsZi9tb3VudGluZm8iKS5yZWFkX3RleHQoKS5zcGxpdGxpbmVzKCk6CiAgICAgICAgYmVmb3JlLCBhZnRlciA9IGxpbmUuc3BsaXQoIiAtICIsIDEpCiAgICAgICAgZmllbGRzID0gYmVmb3JlLnNwbGl0KCkKICAgICAgICB0YXJnZXQgPSBmaWVsZHNbNF0ucmVwbGFjZSgiXFwwNDAiLCAiICIpCiAgICAgICAgaWYgdGFyZ2V0ID09IHBhdGg6CiAgICAgICAgICAgIHJldHVybiB7Im1vdW50cG9pbnQiOiB0YXJnZXQsICJvcHRpb25zIjogZmllbGRzWzVdLnNwbGl0KCIsIiksCiAgICAgICAgICAgICAgICAgICAgImZpbGVzeXN0ZW0iOiBhZnRlci5zcGxpdCgpWzBdfQogICAgcmV0dXJuIE5vbmUKaG9zdF9uZXQgPSBpbnQob3MuZW52aXJvblsiUVVBTElGWV9IT1NUX05FVF9OU19JTk8iXSkKaG9zdF9tbnQgPSBpbnQob3MuZW52aXJvblsiUVVBTElGWV9IT1NUX01OVF9OU19JTk8iXSkKbmV0X2lubyA9IG9zLnN0YXQoIi9wcm9jL3NlbGYvbnMvbmV0Iikuc3RfaW5vCm1udF9pbm8gPSBvcy5zdGF0KCIvcHJvYy9zZWxmL25zL21udCIpLnN0X2lubwp3b3Jrc3BhY2VfbW91bnQgPSBtb3VudF9pbmZvKCIvd29ya3NwYWNlIikKdG1wX21vdW50ID0gbW91bnRfaW5mbygiL3RtcCIpCndyaXRlX2RlbmllZCA9IEZhbHNlCnRyeToKICAgIHdpdGggb3BlbigiL3dvcmtzcGFjZS8ubWFuZGFsYS1xdWFsaWZpY2F0aW9uLXdyaXRlLXByb2JlIiwgInhiIikgYXMgZjoKICAgICAgICBmLndyaXRlKGIicHJvYmUiKQpleGNlcHQgT1NFcnJvcjoKICAgIHdyaXRlX2RlbmllZCA9IFRydWUKdG1wX3dyaXRlID0gRmFsc2UKdHJ5OgogICAgZmQsIG5hbWUgPSB0ZW1wZmlsZS5ta3N0ZW1wKHByZWZpeD0ibWFuZGFsYS1xdWFsaWZpY2F0aW9uLSIpCiAgICBvcy5jbG9zZShmZCkKICAgIG9zLnVubGluayhuYW1lKQogICAgdG1wX3dyaXRlID0gVHJ1ZQpleGNlcHQgT1NFcnJvcjoKICAgIHBhc3MKcHJpbnQoanNvbi5kdW1wcyh7Im5ldF9uYW1lc3BhY2VfaXNvbGF0ZWQiOiBuZXRfaW5vICE9IGhvc3RfbmV0LAogIm1vdW50X25hbWVzcGFjZV9pc29sYXRlZCI6IG1udF9pbm8gIT0gaG9zdF9tbnQsICJ3b3Jrc3BhY2VfbW91bnQiOiB3b3Jrc3BhY2VfbW91bnQsCiAid29ya3NwYWNlX3dyaXRlX2RlbmllZCI6IHdyaXRlX2RlbmllZCwgInRtcF9tb3VudCI6IHRtcF9tb3VudCwKICJ0bXBfd3JpdGVfc3VjY2VlZGVkIjogdG1wX3dyaXRlfSwgc29ydF9rZXlzPVRydWUpKQo='))\"],\"net\":false,\"workspace\":\"/tmp/mandala-bwrap-qualify-mdqbjdes/workspace\",\"rw\":false}"
+    ],
+    "argv_capture": "temporary PATH shim forwards recorded arguments to pinned bwrap executable",
+    "bwrap_argv": {
+      "argv": [
+        "--ro-bind",
+        "/usr",
+        "/usr",
+        "--ro-bind-try",
+        "/lib",
+        "/lib",
+        "--ro-bind-try",
+        "/lib64",
+        "/lib64",
+        "--ro-bind-try",
+        "/nix",
+        "/nix",
+        "--ro-bind-try",
+        "/bin",
+        "/bin",
+        "--ro-bind-try",
+        "/run/current-system",
+        "/run/current-system",
+        "--proc",
+        "/proc",
+        "--dev",
+        "/dev",
+        "--unshare-all",
+        "--tmpfs",
+        "/tmp",
+        "--die-with-parent",
+        "--setenv",
+        "WM_SANDBOXED",
+        "1",
+        "--ro-bind",
+        "/tmp/mandala-bwrap-qualify-mdqbjdes/workspace",
+        "/workspace",
+        "--",
+        "/usr/bin/python3",
+        "-c",
+        "exec(__import__('base64').b64decode('aW1wb3J0IGpzb24sIG9zLCBwYXRobGliLCB0ZW1wZmlsZQpkZWYgbW91bnRfaW5mbyhwYXRoKToKICAgIGZvciBsaW5lIGluIHBhdGhsaWIuUGF0aCgiL3Byb2Mvc2VsZi9tb3VudGluZm8iKS5yZWFkX3RleHQoKS5zcGxpdGxpbmVzKCk6CiAgICAgICAgYmVmb3JlLCBhZnRlciA9IGxpbmUuc3BsaXQoIiAtICIsIDEpCiAgICAgICAgZmllbGRzID0gYmVmb3JlLnNwbGl0KCkKICAgICAgICB0YXJnZXQgPSBmaWVsZHNbNF0ucmVwbGFjZSgiXFwwNDAiLCAiICIpCiAgICAgICAgaWYgdGFyZ2V0ID09IHBhdGg6CiAgICAgICAgICAgIHJldHVybiB7Im1vdW50cG9pbnQiOiB0YXJnZXQsICJvcHRpb25zIjogZmllbGRzWzVdLnNwbGl0KCIsIiksCiAgICAgICAgICAgICAgICAgICAgImZpbGVzeXN0ZW0iOiBhZnRlci5zcGxpdCgpWzBdfQogICAgcmV0dXJuIE5vbmUKaG9zdF9uZXQgPSBpbnQob3MuZW52aXJvblsiUVVBTElGWV9IT1NUX05FVF9OU19JTk8iXSkKaG9zdF9tbnQgPSBpbnQob3MuZW52aXJvblsiUVVBTElGWV9IT1NUX01OVF9OU19JTk8iXSkKbmV0X2lubyA9IG9zLnN0YXQoIi9wcm9jL3NlbGYvbnMvbmV0Iikuc3RfaW5vCm1udF9pbm8gPSBvcy5zdGF0KCIvcHJvYy9zZWxmL25zL21udCIpLnN0X2lubwp3b3Jrc3BhY2VfbW91bnQgPSBtb3VudF9pbmZvKCIvd29ya3NwYWNlIikKdG1wX21vdW50ID0gbW91bnRfaW5mbygiL3RtcCIpCndyaXRlX2RlbmllZCA9IEZhbHNlCnRyeToKICAgIHdpdGggb3BlbigiL3dvcmtzcGFjZS8ubWFuZGFsYS1xdWFsaWZpY2F0aW9uLXdyaXRlLXByb2JlIiwgInhiIikgYXMgZjoKICAgICAgICBmLndyaXRlKGIicHJvYmUiKQpleGNlcHQgT1NFcnJvcjoKICAgIHdyaXRlX2RlbmllZCA9IFRydWUKdG1wX3dyaXRlID0gRmFsc2UKdHJ5OgogICAgZmQsIG5hbWUgPSB0ZW1wZmlsZS5ta3N0ZW1wKHByZWZpeD0ibWFuZGFsYS1xdWFsaWZpY2F0aW9uLSIpCiAgICBvcy5jbG9zZShmZCkKICAgIG9zLnVubGluayhuYW1lKQogICAgdG1wX3dyaXRlID0gVHJ1ZQpleGNlcHQgT1NFcnJvcjoKICAgIHBhc3MKcHJpbnQoanNvbi5kdW1wcyh7Im5ldF9uYW1lc3BhY2VfaXNvbGF0ZWQiOiBuZXRfaW5vICE9IGhvc3RfbmV0LAogIm1vdW50X25hbWVzcGFjZV9pc29sYXRlZCI6IG1udF9pbm8gIT0gaG9zdF9tbnQsICJ3b3Jrc3BhY2VfbW91bnQiOiB3b3Jrc3BhY2VfbW91bnQsCiAid29ya3NwYWNlX3dyaXRlX2RlbmllZCI6IHdyaXRlX2RlbmllZCwgInRtcF9tb3VudCI6IHRtcF9tb3VudCwKICJ0bXBfd3JpdGVfc3VjY2VlZGVkIjogdG1wX3dyaXRlfSwgc29ydF9rZXlzPVRydWUpKQo='))"
+      ],
+      "argv0": "bwrap"
+    },
+    "exit_code": 0,
+    "network_requested": false,
+    "payload_is_fixed_probe": true,
+    "payload_probe_sha256": "sha256:4b1bd00b25e844b3f662aa7ecaf8e10f6adc37df2a5fb8f541a2ef6744325c42",
+    "payload_program": "/usr/bin/python3",
+    "stderr": "",
+    "workspace_host_path": "/tmp/mandala-bwrap-qualify-mdqbjdes/workspace",
+    "workspace_requested_writable": false
+  },
+  "limitations": [
+    "A passing same-host probe does not assign a receipt sandbox_class or close classification/adoption.",
+    "The namespace comparison does not prove outbound network denial to every destination.",
+    "This is not independent-host adoption evidence.",
+    "This fixed probe uses a one-line encoded Python trampoline and does not itself qualify newline-containing payload arguments; run the wrapper argv tests separately."
+  ],
+  "probe_status": "PASS",
+  "probes": {
+    "checks": {
+      "die_with_parent_requested": true,
+      "mount_namespace_isolated": true,
+      "network_namespace_isolated": true,
+      "readonly_workspace_bind_requested": true,
+      "runner_exit_zero": true,
+      "tmp_is_tmpfs": true,
+      "tmp_write_succeeded": true,
+      "tmpfs_tmp_requested": true,
+      "unshare_all_requested": true,
+      "workspace_mount_readonly": true,
+      "workspace_write_denied": true
+    },
+    "observed": {
+      "mount_namespace_isolated": true,
+      "net_namespace_isolated": true,
+      "tmp_mount": {
+        "filesystem": "tmpfs",
+        "mountpoint": "/tmp",
+        "options": [
+          "rw",
+          "nosuid",
+          "nodev",
+          "relatime"
+        ]
+      },
+      "tmp_write_succeeded": true,
+      "workspace_mount": {
+        "filesystem": "ext4",
+        "mountpoint": "/workspace",
+        "options": [
+          "ro",
+          "nosuid",
+          "nodev",
+          "relatime"
+        ]
+      },
+      "workspace_write_denied": true
+    },
+    "outbound_egress_denial_tested": false,
+    "status": "PASS"
+  },
+  "schema": "mandala-bwrap-probe-v1",
+  "wrapper": {
+    "configured_path": "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/anonymous-wrapper/mandala-sandbox",
+    "expected_sha256": "sha256:f7da8d6c3809ac5adbc4631c82fb9327abdb69638715bb0ea1493dc79996411e",
+    "path": "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/anonymous-wrapper/mandala-sandbox",
+    "sha256": "sha256:f7da8d6c3809ac5adbc4631c82fb9327abdb69638715bb0ea1493dc79996411e"
+  }
+}

@@ -1,0 +1,11 @@
+test_bwrap_preserves_exact_argument_bytes (public_wrapper_tests.SandboxArgvTests.test_bwrap_preserves_exact_argument_bytes) ... ok
+test_bwrap_rejects_missing_writable_workspace_and_nonboolean_rw (public_wrapper_tests.SandboxArgvTests.test_bwrap_rejects_missing_writable_workspace_and_nonboolean_rw) ... ok
+test_bwrap_writable_workspace_is_explicit_and_scoped (public_wrapper_tests.SandboxArgvTests.test_bwrap_writable_workspace_is_explicit_and_scoped) ... ok
+test_jq_failure_after_partial_output_does_not_spawn_runner (public_wrapper_tests.SandboxArgvTests.test_jq_failure_after_partial_output_does_not_spawn_runner) ... ok
+test_non_string_args_and_malformed_json_fail_before_runner (public_wrapper_tests.SandboxArgvTests.test_non_string_args_and_malformed_json_fail_before_runner) ... ok
+test_null_args_and_nul_values_fail_closed (public_wrapper_tests.SandboxArgvTests.test_null_args_and_nul_values_fail_closed) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.186s
+
+OK

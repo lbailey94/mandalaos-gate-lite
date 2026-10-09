@@ -1,0 +1,136 @@
+[
+  {
+    "argv": [
+      "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/venv/bin/python",
+      "-m",
+      "gate_lite.ctl",
+      "--state",
+      "/tmp/mandala-05-capture-617jdkoz/state",
+      "--runner",
+      "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/anonymous-wrapper/mandala-sandbox",
+      "tenant-add",
+      "--tenant",
+      "outsider",
+      "--agent",
+      "did:key:zOutsiderRehearsal05"
+    ],
+    "exit": 0,
+    "stdout": "{\n  \"tenant_id\": \"outsider\",\n  \"agents\": [\n    \"did:key:zOutsiderRehearsal05\"\n  ],\n  \"aup_version\": \"2026-09-17.1\",\n  \"settlement_ref\": null\n}\n",
+    "stderr": ""
+  },
+  {
+    "operation": "pass (unkeyed)",
+    "exit": 0,
+    "result": {
+      "pass_id": "pass-83248fba3f08",
+      "slot_id": "slot-98b0c0caede0",
+      "endpoint": "gate://gate-lite-1/slot-98b0c0caede0",
+      "quotas": {
+        "cpu_ms": 300000,
+        "mem_mb": 1024,
+        "disk_mb": 512,
+        "wall_ms": 600000
+      },
+      "expires_at": "2026-10-09T15:51:46Z",
+      "receipt_id": "urn:uuid:01a12153-db52-79c8-804f-5ad87ff4eefe",
+      "token": "<redacted>"
+    }
+  },
+  {
+    "argv": [
+      "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/venv/bin/python",
+      "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/pristine-source/gate-lite/tools/capture_outsider_05.py",
+      "--exec-child",
+      "--state",
+      "/tmp/mandala-05-capture-617jdkoz/state",
+      "--runner",
+      "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/anonymous-wrapper/mandala-sandbox",
+      "--slot",
+      "slot-98b0c0caede0",
+      "--commitment-snapshot",
+      "/tmp/mandala-05-capture-617jdkoz/commitment.json"
+    ],
+    "exit": 0,
+    "stdout": "{\n  \"slot_id\": \"slot-98b0c0caede0\",\n  \"exit\": 0,\n  \"stdout_hash\": \"sha256:9f59b53267f2c28054c2b951bfbbb6602482b168e0540debb2f8bcbe15e8243f\",\n  \"receipt_ids\": [\n    \"urn:uuid:01a12153-dcb1-715c-85c7-8cfe7a955658\",\n    \"urn:uuid:01a12153-dce5-7bd0-95c1-3e18ced34a61\",\n    \"urn:uuid:01a12153-dce6-7656-9576-5126a2198990\"\n  ],\n  \"stderr_hash\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/venv/bin/python",
+      "-m",
+      "gate_lite.ctl",
+      "--state",
+      "/tmp/mandala-05-capture-617jdkoz/state",
+      "--runner",
+      "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/anonymous-wrapper/mandala-sandbox",
+      "settle",
+      "--tenant",
+      "outsider",
+      "--slot",
+      "slot-98b0c0caede0",
+      "--rail",
+      "invoice",
+      "--rail-ref",
+      "local-rehearsal-05",
+      "--minor",
+      "0"
+    ],
+    "exit": 0,
+    "stdout": "{\n  \"spec\": \"continuity-receipt/0.5\",\n  \"receipt_id\": \"urn:uuid:01a12153-dd8c-7185-92e5-45eb1396521a\",\n  \"task_id\": \"urn:uuid:01a12153-db52-7cf1-a6dc-de7903632302\",\n  \"issued_at\": \"2026-10-09T15:41:46Z\",\n  \"issuer\": {\n    \"kind\": \"gate\",\n    \"id\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\"\n  },\n  \"type\": \"settlement\",\n  \"seq\": 5,\n  \"prev\": \"sha256:6471f7c217bd5dc6d28e7bec3d2b5fcb091e4a1e2cfdd5d17f5e4c7e7273b200\",\n  \"body\": {\n    \"rail\": \"invoice\",\n    \"rail_ref\": \"local-rehearsal-05\",\n    \"amount\": {\n      \"minor\": 0,\n      \"currency\": \"USD\"\n    },\n    \"gated_on_delivery\": true,\n    \"settled_at\": \"2026-10-09T15:41:46Z\"\n  },\n  \"sig\": {\n    \"alg\": \"ed25519\",\n    \"key\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\",\n    \"value\": \"8yX-aOODmVNj14eFklmp-0VLVBUaOhJvXWSKZlf55ahvXB0eFG0EPeh_tbS5TJUr_Qi5tJ1KtqsggShG0NJIBA\"\n  }\n}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/venv/bin/python",
+      "-m",
+      "gate_lite.ctl",
+      "--state",
+      "/tmp/mandala-05-capture-617jdkoz/state",
+      "--runner",
+      "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/anonymous-wrapper/mandala-sandbox",
+      "terminate",
+      "--tenant",
+      "outsider",
+      "--slot",
+      "slot-98b0c0caede0"
+    ],
+    "exit": 0,
+    "stdout": "{\n  \"slot_id\": \"slot-98b0c0caede0\",\n  \"task_id\": \"urn:uuid:01a12153-db52-7cf1-a6dc-de7903632302\",\n  \"receipt_id\": \"urn:uuid:01a12153-de70-741f-9e0f-642bc0cfa65a\"\n}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/venv/bin/python",
+      "-m",
+      "gate_lite.ctl",
+      "--state",
+      "/tmp/mandala-05-capture-617jdkoz/state",
+      "--runner",
+      "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/anonymous-wrapper/mandala-sandbox",
+      "receipt",
+      "--task-id",
+      "urn:uuid:01a12153-db52-7cf1-a6dc-de7903632302",
+      "--verdict"
+    ],
+    "exit": 0,
+    "stdout": "{\n  \"verdict\": \"TRUSTED\",\n  \"errors\": [],\n  \"provisional_reasons\": [],\n  \"insufficient_reasons\": [],\n  \"summary\": {\n    \"receipts\": 7,\n    \"types\": [\n      \"session.pass.created\",\n      \"task.decision\",\n      \"task.execution\",\n      \"state.commitment\",\n      \"delivery.attestation\",\n      \"settlement\",\n      \"task.termination\"\n    ],\n    \"issuers\": [\n      \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\"\n    ],\n    \"terminated\": true,\n    \"settled\": true,\n    \"attestations\": [\n      {\n        \"receipt_id\": \"urn:uuid:01a12153-dd8b-7cc4-a9ad-8698c85f7e15\",\n        \"counterparty\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\",\n        \"attestation\": \"absent\"\n      }\n    ]\n  }\n}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/venv/bin/python",
+      "-m",
+      "gate_lite.ctl",
+      "--state",
+      "/tmp/mandala-05-capture-617jdkoz/state",
+      "--runner",
+      "/home/lucas/Documents/ChatGPT/Whitemagic Website!/outputs/mandala-05-frozen-20261009/anonymous-wrapper/mandala-sandbox",
+      "receipt",
+      "--task-id",
+      "urn:uuid:01a12153-db52-7cf1-a6dc-de7903632302"
+    ],
+    "exit": 0,
+    "stdout": "{\n  \"spec\": \"continuity-receipt/0.5\",\n  \"task_id\": \"urn:uuid:01a12153-db52-7cf1-a6dc-de7903632302\",\n  \"receipts\": [\n    {\n      \"spec\": \"continuity-receipt/0.5\",\n      \"receipt_id\": \"urn:uuid:01a12153-db52-79c8-804f-5ad87ff4eefe\",\n      \"task_id\": \"urn:uuid:01a12153-db52-7cf1-a6dc-de7903632302\",\n      \"issued_at\": \"2026-10-09T15:41:46Z\",\n      \"issuer\": {\n        \"kind\": \"gate\",\n        \"id\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\"\n      },\n      \"type\": \"session.pass.created\",\n      \"seq\": 0,\n      \"prev\": null,\n      \"body\": {\n        \"gate_id\": \"gate-lite-1\",\n        \"mandala_class\": \"gate-lite\",\n        \"quotas\": {\n          \"cpu_ms\": 300000,\n          \"mem_mb\": 1024,\n          \"disk_mb\": 512,\n          \"wall_ms\": 600000\n        },\n        \"expires_at\": \"2026-10-09T15:51:46Z\",\n        \"policy_version\": \"2026-09-17.1\",\n        \"mandate_ref\": \"sha256:12b07a22268e0627817a8413c1bfba32490cc28b68c31ff5be21cf8cae64f21a\",\n        \"agent_id\": \"did:key:zOutsiderRehearsal05\",\n        \"pass_token_id\": \"sha256:54466d87acf6d48ccbb29a5878de6e20b610955a597cab0061f27dbebe27ba36\",\n        \"spend_cap\": {\n          \"minor\": 1000,\n          \"currency\": \"USD\"\n        }\n      },\n      \"sig\": {\n        \"alg\": \"ed25519\",\n        \"key\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\",\n        \"value\": \"lg2NI4VD0PF8KfvtRtKE2WsIz0U0sVQazNmr2S25T6dgEzcGwhUnSlSLNB_e8FZfR0T2B5Xuc4TpATjVsLcaCg\"\n      }\n    },\n    {\n      \"spec\": \"continuity-receipt/0.5\",\n      \"receipt_id\": \"urn:uuid:01a12153-dcb1-715c-85c7-8cfe7a955658\",\n      \"task_id\": \"urn:uuid:01a12153-db52-7cf1-a6dc-de7903632302\",\n      \"issued_at\": \"2026-10-09T15:41:46Z\",\n      \"issuer\": {\n        \"kind\": \"gate\",\n        \"id\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\"\n      },\n      \"type\": \"task.decision\",\n      \"seq\": 1,\n      \"prev\": \"sha256:e4ed7bb12a8bdddb08c08d21e3c0b85002ff61d094ac58b2723fbd9b0172e164\",\n      \"body\": {\n        \"action\": \"mandala.exec\",\n        \"action_args_hash\": \"sha256:cefdcb9fee60dbc706498b3e1bf17827e0c4be0ca6cf9025d4767cc2f485e272\",\n        \"model\": {\n          \"provider\": \"gate\",\n          \"id\": \"sandbox\"\n        },\n        \"input_provenance\": {\n          \"policy_id\": \"gate.egress.default\",\n          \"allowed_sources\": [\n            \"gate\"\n          ],\n          \"observed_sources_hash\": \"sha256:c974e17b8e7321ce8c12983de3d0ed4a289821f579bbe0925b0181a4bc8e8d80\"\n        },\n        \"decision\": \"allow\",\n        \"policy_version\": \"2026-09-17.1\"\n      },\n      \"sig\": {\n        \"alg\": \"ed25519\",\n        \"key\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\",\n        \"value\": \"fsbqq4Qx_nfAGzl2aXi2Da32YIYAt2e_hQJ6GXdGifgVaQmBVeXM410-Ys36LbkHOHoGyUkd5g7kTqh2q7BXAA\"\n      }\n    },\n    {\n      \"spec\": \"continuity-receipt/0.5\",\n      \"receipt_id\": \"urn:uuid:01a12153-dce5-7bd0-95c1-3e18ced34a61\",\n      \"task_id\": \"urn:uuid:01a12153-db52-7cf1-a6dc-de7903632302\",\n      \"issued_at\": \"2026-10-09T15:41:46Z\",\n      \"issuer\": {\n        \"kind\": \"gate\",\n        \"id\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\"\n      },\n      \"type\": \"task.execution\",\n      \"seq\": 2,\n      \"prev\": \"sha256:b479b433e7c03799e492627894a1acb281e0abaffefae7c51faa33545985901a\",\n      \"body\": {\n        \"tool_calls\": [\n          {\n            \"name\": \"mandala.exec\",\n            \"args_hash\": \"sha256:cefdcb9fee60dbc706498b3e1bf17827e0c4be0ca6cf9025d4767cc2f485e272\",\n            \"result_hash\": \"sha256:9f59b53267f2c28054c2b951bfbbb6602482b168e0540debb2f8bcbe15e8243f\"\n          }\n        ],\n        \"egress\": [\n          {\n            \"destination\": \"none\",\n            \"bytes\": 0,\n            \"allowed\": true,\n            \"enforcer\": \"bwrap --unshare-all\",\n            \"enforced\": true\n          }\n        ],\n        \"resources\": {\n          \"cpu_ms\": 0,\n          \"mem_peak_mb\": 0,\n          \"disk_peak_mb\": 0\n        },\n        \"sandbox_class\": \"bwrap\",\n        \"runner_profile\": {\n          \"profile_id\": \"urn:mandala:runner-profile:bwrap-v1\",\n          \"executable_digest\": \"sha256:f7da8d6c3809ac5adbc4631c82fb9327abdb69638715bb0ea1493dc79996411e\",\n          \"invocation_digest\": \"sha256:a9fad7234f167f453cb228c89b989d668c212abb234e370ecb0d01df9170b03c\"\n        }\n      },\n      \"sig\": {\n        \"alg\": \"ed25519\",\n        \"key\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\",\n        \"value\": \"lHE7RRYLYF703Z4tNfLLUerJlzb7LRJbIhcXKOVE6oi1oAA7t7g5TNIc_UcioJV2Mg38wIQxmUwKWM4T8RdKBA\"\n      }\n    },\n    {\n      \"spec\": \"continuity-receipt/0.5\",\n      \"receipt_id\": \"urn:uuid:01a12153-dce6-7656-9576-5126a2198990\",\n      \"task_id\": \"urn:uuid:01a12153-db52-7cf1-a6dc-de7903632302\",\n      \"issued_at\": \"2026-10-09T15:41:46Z\",\n      \"issuer\": {\n        \"kind\": \"gate\",\n        \"id\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\"\n      },\n      \"type\": \"state.commitment\",\n      \"seq\": 3,\n      \"prev\": \"sha256:1ec48bc78f3c4e9e1934a48723e4931e0fa1eb736f76b6b7dcedcad93f6a445b\",\n      \"body\": {\n        \"state_kind\": \"gate-lite.registry-head\",\n        \"scope\": \"gate-lite.registry\",\n        \"count\": 3,\n        \"head_digest\": \"sha256:3f0332f9f35259c5800fed1c41c2b23050290598219b8ac57c8a26634e9c75d2\"\n      },\n      \"sig\": {\n        \"alg\": \"ed25519\",\n        \"key\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\",\n        \"value\": \"lsvgOT5uKbT9Cz_elR3Zh1QpqZUAvnu1WdPc82mRjQ9qOdWDYyzzzAWRN7ZpljuycZj2HuuY0JECvPTUK1hEBA\"\n      }\n    },\n    {\n      \"spec\": \"continuity-receipt/0.5\",\n      \"receipt_id\": \"urn:uuid:01a12153-dd8b-7cc4-a9ad-8698c85f7e15\",\n      \"task_id\": \"urn:uuid:01a12153-db52-7cf1-a6dc-de7903632302\",\n      \"issued_at\": \"2026-10-09T15:41:46Z\",\n      \"issuer\": {\n        \"kind\": \"gate\",\n        \"id\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\"\n      },\n      \"type\": \"delivery.attestation\",\n      \"seq\": 4,\n      \"prev\": \"sha256:2341f36300a1ae5ce9e408fb0334520990e8f3d6c9802cf05a493520a437f0a9\",\n      \"body\": {\n        \"request_hash\": \"sha256:f74367fd1786267a7b6aa4132229c6c8fa661082fd261863a794e223150eb2ed\",\n        \"response_hash\": \"sha256:9f59b53267f2c28054c2b951bfbbb6602482b168e0540debb2f8bcbe15e8243f\",\n        \"counterparty\": {\n          \"id\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\"\n        },\n        \"spec_ref\": \"continuity-receipt/0.5\"\n      },\n      \"sig\": {\n        \"alg\": \"ed25519\",\n        \"key\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\",\n        \"value\": \"l_vT-D0QnGSXcU_grJbudtOy9BQXCs6oZ3BTx3NCEauUkDn5jNvEPZMd8jYdgXpDS-HvkmUeMQYt1ryAugPWAg\"\n      }\n    },\n    {\n      \"spec\": \"continuity-receipt/0.5\",\n      \"receipt_id\": \"urn:uuid:01a12153-dd8c-7185-92e5-45eb1396521a\",\n      \"task_id\": \"urn:uuid:01a12153-db52-7cf1-a6dc-de7903632302\",\n      \"issued_at\": \"2026-10-09T15:41:46Z\",\n      \"issuer\": {\n        \"kind\": \"gate\",\n        \"id\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\"\n      },\n      \"type\": \"settlement\",\n      \"seq\": 5,\n      \"prev\": \"sha256:6471f7c217bd5dc6d28e7bec3d2b5fcb091e4a1e2cfdd5d17f5e4c7e7273b200\",\n      \"body\": {\n        \"rail\": \"invoice\",\n        \"rail_ref\": \"local-rehearsal-05\",\n        \"amount\": {\n          \"minor\": 0,\n          \"currency\": \"USD\"\n        },\n        \"gated_on_delivery\": true,\n        \"settled_at\": \"2026-10-09T15:41:46Z\"\n      },\n      \"sig\": {\n        \"alg\": \"ed25519\",\n        \"key\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\",\n        \"value\": \"8yX-aOODmVNj14eFklmp-0VLVBUaOhJvXWSKZlf55ahvXB0eFG0EPeh_tbS5TJUr_Qi5tJ1KtqsggShG0NJIBA\"\n      }\n    },\n    {\n      \"spec\": \"continuity-receipt/0.5\",\n      \"receipt_id\": \"urn:uuid:01a12153-de70-741f-9e0f-642bc0cfa65a\",\n      \"task_id\": \"urn:uuid:01a12153-db52-7cf1-a6dc-de7903632302\",\n      \"issued_at\": \"2026-10-09T15:41:46Z\",\n      \"issuer\": {\n        \"kind\": \"gate\",\n        \"id\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\"\n      },\n      \"type\": \"task.termination\",\n      \"seq\": 6,\n      \"prev\": \"sha256:20a1db6a7cabd4311289ad063439a2796678b7c795eda1594a57d7784fe046ff\",\n      \"body\": {\n        \"reason\": \"completed\",\n        \"limits_at_stop\": {\n          \"cpu_ms\": 300000,\n          \"wall_ms\": 600000,\n          \"spend_minor\": 0,\n          \"currency\": \"USD\"\n        },\n        \"remaining\": {\n          \"cpu_ms\": 0,\n          \"wall_ms\": 600000,\n          \"spend_minor\": 0,\n          \"currency\": \"USD\"\n        }\n      },\n      \"sig\": {\n        \"alg\": \"ed25519\",\n        \"key\": \"did:key:z6MkrLyQAeSzgEA8iP9o5qqKdCmz8RxcxCWH7gJAgKuNWL1q\",\n        \"value\": \"DwC_PMPGQcUdgV-1SYncpg00uFz37txYZWNnP-VxqOJ1DjPnaGfCXd9OERkBfaG5Yp7uzaXXDr0tM-7eJH6aAg\"\n      }\n    }\n  ]\n}\n",
+    "stderr": ""
+  }
+]

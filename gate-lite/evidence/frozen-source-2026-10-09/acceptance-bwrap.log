@@ -1,0 +1,17 @@
+test_declared_but_unpermitted_destination_denied (test_acceptance.TestEgressDeny.test_declared_but_unpermitted_destination_denied) ... ok
+test_net_without_declared_destinations_denied (test_acceptance.TestEgressDeny.test_net_without_declared_destinations_denied) ... ok
+test_exec_refused_when_emitter_down (test_acceptance.TestFailClosedEmitter.test_exec_refused_when_emitter_down) ... ok
+test_mcp_reports_emitter_unavailable (test_acceptance.TestFailClosedEmitter.test_mcp_reports_emitter_unavailable) ... ok
+test_kill_idle_slot_records_operator (test_acceptance.TestOperatorKillIdle.test_kill_idle_slot_records_operator) ... ok
+test_kill_stops_live_run (test_acceptance.TestOperatorKillLive.test_kill_stops_live_run) ... ok
+test_memory_overrun_kills_slot (test_acceptance.TestQuotaKill.test_memory_overrun_kills_slot) ... skipped 'set GATE_LITE_QUOTA_TESTS=1 to run systemd quota tests'
+test_wall_overrun_kills_slot (test_acceptance.TestQuotaKill.test_wall_overrun_kills_slot) ... skipped 'set GATE_LITE_QUOTA_TESTS=1 to run systemd quota tests'
+test_snapshot_freezes_and_attests_artifact (test_acceptance.TestSnapshot.test_snapshot_freezes_and_attests_artifact) ... ok
+test_commitment_emitter_failure_is_terminal_and_never_returns_success (test_acceptance.TestStateCommitmentFailure.test_commitment_emitter_failure_is_terminal_and_never_returns_success) ... ok
+test_commitment_snapshot_failure_is_terminal_after_execution (test_acceptance.TestStateCommitmentFailure.test_commitment_snapshot_failure_is_terminal_after_execution) ... ok
+test_sandbox_write_snapshot_restore (test_acceptance.TestWorkspaceRoundtrip.test_sandbox_write_snapshot_restore) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.357s
+
+OK (skipped=2)

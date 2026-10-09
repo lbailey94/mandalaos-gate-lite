@@ -1,94 +1,87 @@
-# Integrating a project with gate-lite (public curated snapshot, receipt 0.4)
+# Integrating a project with the gate-lite 0.5 review candidate
 
-This contract describes the public, review-only gate-lite snapshot. It is not a
-release and does not represent the full MandalaOS system. Gate-lite's current
-containment class is shared-kernel; it is not an untrusted-tenant boundary.
+This contract describes the selective review candidate, not a release of the
+whole MandalaOS system. Public main remains at the 0.4 posture until independent
+port review and publication. Containment is shared-kernel Bubblewrap for
+cooperating workloads; this is not a hostile-tenant or VM boundary.
 
 ## Version and ownership boundaries
 
 | Boundary | Owner | Record per run |
 |---|---|---|
-| Project workload | integrating project | source revision, payload or envelope digest |
-| Pass and lifecycle | gate-lite | gate-lite commit, tenant, agent DID, slot and task IDs |
-| Sandbox | configured runner | executable path and SHA-256, observed containment class, slice setting |
-| Receipt format and verification | `continuity-receipt` | installed distribution version, imported runtime version, emitted `spec`, verifier verdict |
+| Workload | integrating project | source revision, payload/envelope digest, output artifact |
+| Pass and lifecycle | gate-lite | exact source SHA, tenant, agent, slot/task IDs |
+| Sandbox | operator/configured runner | wrapper and dependency hashes, profile ID/status, class, slice setting |
+| Receipt verification | continuity-receipt | distribution and imported runtime versions, emitted spec, verdict |
 
-Use Python 3.11+ and install this snapshot's `gate-lite` package in an isolated
-environment. Its dependency is pinned to exactly `continuity-receipt==0.4.0`.
-At startup, gate-lite checks that the installed distribution metadata and
-imported runtime both report `0.4.0`, and that the imported runtime supports
-the pinned receipt spec. A mismatch stops startup. Do not silently reuse
-qualification evidence after changing the gate-lite source, receipt package,
-runner, or runner configuration.
+Install Python 3.11+ and exactly `continuity-receipt==0.5.0`. Gate-lite checks
+installed metadata, imported runtime version and `continuity-receipt/0.5`
+support before creating state. Typed preflight failures include expected/found
+values and an action; CLI exits 3, MCP returns structured tool errors. A changed
+source, dependency, runner or configuration requires new evidence.
 
-## Current execution status
+## Execution profile
 
-The curated snapshot does not currently qualify a real runner. A configured
-runner is reported as `unknown` / `unqualified`; real `mandala.exec` refuses it
-before consuming the pass token or spawning the payload. `--demo` explicitly
-selects simulated execution, and its outputs must be labeled simulation. Do
-not present a demo run as sandboxed execution.
+The reviewed `bwrap-v1` profile requires exact wrapper, Bubblewrap and jq hashes
+listed in [README.md](README.md#runner-egress-and-lifecycle). A match reports
+`locally_qualified` and class `bwrap`; any unknown or changed identity refuses
+before consuming a pass token or spawning the payload. This profile derives
+from the bounded same-host private 0.5 exercise. The selective public port needs
+its own exact-commit verification and independent review. Other host/tool builds
+need separately reviewed profiles; do not change hashes merely to force success.
 
-The 2026-09-24 real-runner 0.4 exercise is historical evidence for its recorded
-private source pin and environment. It does not qualify the current curated
-source revision. Earlier 0.3 evidence remains labeled as 0.3. Both exercises
-were same-host clean-export reproductions by a collaborator with a pre-existing
-runner, not unassisted stranger installs or independent-host qualification.
+Explicit `--demo` selects simulation, class `none`. It does not qualify a runner.
+The 2026-09-24 0.3/0.4 exercises and signed historical `bwrap-landlock` labels
+remain evidence for their original pins; Bubblewrap alone does not establish
+Landlock. The later accepted private source `8e84b25` and public packet `1357c14`
+are separate pins in the [frozen exercise](evidence/frozen-source-2026-10-09/REPORT.md).
 
-## Minimum lifecycle for a simulation
+## Minimum adapter lifecycle
 
-1. Start the CLI or MCP server with `--demo`. A real-runner flow is held until
-   a runner is qualified for the exact source and its observed containment
-   class matches the reviewed profile.
-2. Register a tenant and its allowed agent DID. `mandala.pass` rejects an
-   unregistered agent. Set time and spend bounds appropriate to the project;
-   retain the returned `slot_id` and single-use `token` securely.
-3. Execute with the matching tenant, slot, payload, and token. A successful
-   simulated execution consumes the token. Reuse an idempotency key only for
-   the same request. Inspect `mandala.status` and label results as simulated.
-4. Settle and terminate the slot, including a zero-value settlement when no
-   charge applies. Preserve the resulting `task_id`.
-5. Export the receipt bundle and verify it offline with the published
-   `continuity-receipt-verify` command. Record the verdict and exact verifier
-   version beside the bundle. `TRUSTED` validates protocol and configured
-   policy checks; it does not prove the workload ran in a real sandbox or that
-   the issuer's factual claims are true.
+1. Start from a fresh exact-source export and new environment. Select the
+   reviewed real runner, or explicitly mark the entire flow as simulation.
+2. Register the tenant and allowed agent. Issue bounded time/spend quotas;
+   retain the slot and token privately. Pass issuance rejects an unregistered agent.
+3. Execute using the matching tenant, slot and token. Prefer CLI `--token-stdin`;
+   MCP `mandala.exec` requires `token`. Successful exec consumes the JTI durably.
+   Authorization precedes idempotency cache access; reuse a key only for the
+   identical request in its tenant/slot scope.
+4. Inspect the execution and following `state.commitment`. Commitment failure
+   leaves `receipt_incomplete` for operator review; do not rerun the payload.
+5. Settle and terminate, including explicit zero-value invoice settlement when
+   appropriate. After restart, issuer delivery response binds the latest durable
+   execution stdout digest. Before execution, the explicit `sha256("none")`
+   sentinel remains. Neither case establishes external delivery or payment.
+6. Export and verify the bundle offline. Record the exact source, dependencies,
+   wrapper profile and verifier version alongside it. Independently recompute
+   claimed state and invocation bindings from the exact captured inputs.
 
-The copyable CLI flow is in [`README.md`](README.md#quick-start). MCP exposes
-the lifecycle over stdio or loopback HTTP through `mandala.pass`,
-`mandala.exec`, `mandala.settle`, `mandala.terminate`, and `mandala.receipt`.
-`mandala.exec` requires `token` in its schema. Treat tokens as secrets; do not
-include them in logs, bundles, or support tickets.
+Keyed issuance caches the complete result including the plaintext token in the
+private registry; lost unkeyed issuance cannot recover it. Keep runtime DBs,
+keys, tokens, and keyed caches out of public evidence. The bounded capture tool
+uses unkeyed issuance and exports only its privacy-checked observation snapshot.
+Its source pin/status are operator assertions; verify provenance separately.
 
-## Egress and containment limits
+## Egress, recovery and verification limits
 
-The curated snapshot does not implement destination-level egress enforcement.
-Declared destinations are recorded intent, not an allowlist. When network
-access is granted by the current wrapper, it is whole-network; receipts mark
-those destinations `enforced: false`. Do not claim L2, proxy-only, or
-destination-filtered egress for this snapshot.
+Default-deny uses a separate network namespace. Granting `net: true` with
+specified destinations shares the whole network; destinations record intent
+with `enforced: false`. This candidate adds no destination filtering or L2 proxy
+profile. Workspace snapshots restore filesystem artifacts, not VM/process state.
+Operator kill retains POSIX fallback when systemd is absent or fails.
 
-The documented bwrap/Landlock containment is shared-kernel isolation. Correct
-the reported class to observed evidence: a Bubblewrap-only runner must not be
-reported as `bwrap-landlock`. This snapshot does not provide a microVM boundary
-or establish safety for mutually untrusted tenants.
+TRUSTED validates signed chain structure and policy consistency, not factual
+issuer honesty or actual containment. CLI, console and module verification share
+one Python implementation. Mechanism probes, independent hash recomputation and
+receipt conformance are separate evidence views. Wall/OOM quota qualification,
+independent adoption, payment qualification, external delivery attestation,
+hostile-tenant isolation and VM containment remain open.
 
-## Acceptance for a real project adapter
+## Adapter acceptance
 
-- A future reviewed qualification identifies an exact gate-lite source
-  revision, receipt package/runtime version, runner executable and sidecars,
-  observed containment class, and configuration.
-- The runner is qualified against that exact profile before a pass token is
-  consumed or a payload is spawned; missing, changed, or mismatched identity
-  fails closed.
-- A clean install completes the real-runner lifecycle and captures the
-  project's output artifact, receipt bundle, dependency versions, and offline
-  verifier result without copying the pass token.
-- Missing or wrong agent, slot, tenant, or token is refused before execution;
-  restart and concurrent replay behavior are covered by the suite.
-- Any project-specific resource binds, network destinations, or store access
-  are declared and tested in the runner envelope before claiming support.
-
-Start with one adapter and its evidence bundle. Promote additional runner
-capabilities only after their containment and recovery checks pass on the exact
-candidate.
+Require exact-source ordinary tests, explicit real-profile acceptance, a captured
+project output and TRUSTED bundle, and negative authorization/replay/restart
+cases. Record actual skips and configuration; missing quota coverage does not
+qualify quotas. Test project-specific resource binds, destinations and store
+access before claiming support. Start with one adapter and its evidence bundle;
+promote additional runner capabilities only after their exact-profile review.

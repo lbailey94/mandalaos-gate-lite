@@ -1,0 +1,49 @@
+{
+  "tenants": {
+    "outsider": {
+      "tenant_id": "outsider",
+      "agents": [
+        "did:key:zOutsiderRehearsal05"
+      ],
+      "aup_version": "2026-09-17.1",
+      "settlement_ref": null
+    }
+  },
+  "slots": {
+    "slot-98b0c0caede0": {
+      "slot_id": "slot-98b0c0caede0",
+      "tenant_id": "outsider",
+      "state": "starting",
+      "slot_class": "small",
+      "quotas": {
+        "cpu_ms": 300000,
+        "mem_mb": 1024,
+        "disk_mb": 512,
+        "wall_ms": 600000
+      },
+      "created_at": 1791560506,
+      "expires_at": 1791561106,
+      "template": "default",
+      "pass_id": "pass-83248fba3f08",
+      "task_id": "urn:uuid:01a12153-db52-7cf1-a6dc-de7903632302",
+      "run_generation": 1,
+      "starting_at_ms": 1791560506544
+    }
+  },
+  "passes": {
+    "pass-83248fba3f08": {
+      "pass_id": "pass-83248fba3f08",
+      "slot_id": "slot-98b0c0caede0",
+      "agent_id": "did:key:zOutsiderRehearsal05",
+      "principal_id": null,
+      "expires_at": 1791561106,
+      "spend_cap": {
+        "minor": 1000,
+        "currency": "USD"
+      },
+      "jti": "01a12153-db52-7fb5-8510-54d266208b4c"
+    }
+  },
+  "snapshots": {},
+  "idempotency": {}
+}

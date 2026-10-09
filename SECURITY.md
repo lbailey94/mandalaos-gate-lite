@@ -3,9 +3,10 @@
 ## Scope
 
 This repository is a **public-review snapshot** of MandalaOS gate-lite. Its
-containment class is **shared-kernel** (bubblewrap/Landlock): it isolates
-cooperating tenants from each other and from the host filesystem in a
-single-user deployment. It is **not** an untrusted multi-tenant security
+candidate profile is **shared-kernel Bubblewrap** for cooperating workloads
+in a single-user deployment. Its exact wrapper/dependency hashes and bounded
+same-host evidence are described in `gate-lite/README.md`; it does not establish
+Landlock or independently qualify another host. It is **not** an untrusted multi-tenant security
 boundary — that is gate-hard (microVM floor), which is not built. Reports
 that assume gate-lite is a tenant isolation boundary will be answered with
 that distinction.

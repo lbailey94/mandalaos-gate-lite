@@ -1,0 +1,158 @@
+test_declared_but_unpermitted_destination_denied (test_acceptance.TestEgressDeny.test_declared_but_unpermitted_destination_denied) ... skipped 'set GATE_LITE_REAL_RUNNER_TESTS=1 to run real bwrap acceptance tests'
+test_net_without_declared_destinations_denied (test_acceptance.TestEgressDeny.test_net_without_declared_destinations_denied) ... skipped 'set GATE_LITE_REAL_RUNNER_TESTS=1 to run real bwrap acceptance tests'
+test_exec_refused_when_emitter_down (test_acceptance.TestFailClosedEmitter.test_exec_refused_when_emitter_down) ... ok
+test_mcp_reports_emitter_unavailable (test_acceptance.TestFailClosedEmitter.test_mcp_reports_emitter_unavailable) ... ok
+test_kill_idle_slot_records_operator (test_acceptance.TestOperatorKillIdle.test_kill_idle_slot_records_operator) ... ok
+test_kill_stops_live_run (test_acceptance.TestOperatorKillLive.test_kill_stops_live_run) ... skipped 'set GATE_LITE_REAL_RUNNER_TESTS=1 to run real bwrap acceptance tests'
+test_memory_overrun_kills_slot (test_acceptance.TestQuotaKill.test_memory_overrun_kills_slot) ... skipped 'set GATE_LITE_REAL_RUNNER_TESTS=1 and GATE_LITE_QUOTA_TESTS=1 to run systemd quota tests'
+test_wall_overrun_kills_slot (test_acceptance.TestQuotaKill.test_wall_overrun_kills_slot) ... skipped 'set GATE_LITE_REAL_RUNNER_TESTS=1 and GATE_LITE_QUOTA_TESTS=1 to run systemd quota tests'
+test_snapshot_freezes_and_attests_artifact (test_acceptance.TestSnapshot.test_snapshot_freezes_and_attests_artifact) ... ok
+test_commitment_emitter_failure_is_terminal_and_never_returns_success (test_acceptance.TestStateCommitmentFailure.test_commitment_emitter_failure_is_terminal_and_never_returns_success) ... ok
+test_commitment_snapshot_failure_is_terminal_after_execution (test_acceptance.TestStateCommitmentFailure.test_commitment_snapshot_failure_is_terminal_after_execution) ... ok
+test_sandbox_write_snapshot_restore (test_acceptance.TestWorkspaceRoundtrip.test_sandbox_write_snapshot_restore) ... skipped 'set GATE_LITE_REAL_RUNNER_TESTS=1 to run real bwrap acceptance tests'
+test_default_policy_skips_with_actionable_reason (test_acceptance_policy.TestAcceptancePolicy.test_default_policy_skips_with_actionable_reason) ... ok
+test_invalid_opt_in_value_is_not_silently_skipped (test_acceptance_policy.TestAcceptancePolicy.test_invalid_opt_in_value_is_not_silently_skipped) ... ok
+test_invalid_opt_in_without_configured_executable_fails_clearly (test_acceptance_policy.TestAcceptancePolicy.test_invalid_opt_in_without_configured_executable_fails_clearly) ... ok
+test_opt_in_rejects_unqualified_executable_profile (test_acceptance_policy.TestAcceptancePolicy.test_opt_in_rejects_unqualified_executable_profile) ... ok
+test_opt_in_requires_exact_reviewed_profile_and_dependencies (test_acceptance_policy.TestAcceptancePolicy.test_opt_in_requires_exact_reviewed_profile_and_dependencies) ... ok
+test_quota_opt_in_reports_missing_systemd_prerequisite (test_acceptance_policy.TestAcceptancePolicy.test_quota_opt_in_reports_missing_systemd_prerequisite) ... ok
+test_demo_flag_allows_stub_exec (test_ctl.TestCtlRunnerGuard.test_demo_flag_allows_stub_exec) ... ok
+test_empty_stdin_token_is_structured_refusal (test_ctl.TestCtlRunnerGuard.test_empty_stdin_token_is_structured_refusal) ... ok
+test_exec_refuses_without_runner_or_demo (test_ctl.TestCtlRunnerGuard.test_exec_refuses_without_runner_or_demo) ... ok
+test_exec_requires_token_flag (test_ctl.TestCtlRunnerGuard.test_exec_requires_token_flag) ... ok
+test_intentional_runner_and_slice_environment_is_honored (test_ctl.TestCtlRunnerGuard.test_intentional_runner_and_slice_environment_is_honored) ... ok
+test_slice_without_runner_rejected (test_ctl.TestCtlRunnerGuard.test_slice_without_runner_rejected) ... ok
+test_cli_redact_verify_end_to_end (test_disclose.TestDisclosure.test_cli_redact_verify_end_to_end) ... ok
+test_redact_then_attach_verifies_trusted (test_disclose.TestDisclosure.test_redact_then_attach_verifies_trusted) ... ok
+test_required_field_refused (test_disclose.TestDisclosure.test_required_field_refused) ... ok
+test_reveal_subset_stays_provisional (test_disclose.TestDisclosure.test_reveal_subset_stays_provisional) ... ok
+test_tampered_disclosure_detected (test_disclose.TestDisclosure.test_tampered_disclosure_detected) ... ok
+test_declared_destinations_are_intent_with_whole_network_access (test_egress_semantics.TestEgressSemantics.test_declared_destinations_are_intent_with_whole_network_access) ... ok
+test_destinations_without_network_request_are_enforced_denial (test_egress_semantics.TestEgressSemantics.test_destinations_without_network_request_are_enforced_denial) ... ok
+test_network_request_without_destinations_is_enforced_denial (test_egress_semantics.TestEgressSemantics.test_network_request_without_destinations_is_enforced_denial) ... ok
+test_plain_command_has_no_egress_request (test_egress_semantics.TestEgressSemantics.test_plain_command_has_no_egress_request) ... ok
+test_subprocess_http_end_to_end (test_http_transport.TestHttpSubprocess.test_subprocess_http_end_to_end) ... /usr/lib/python3.12/unittest/case.py:589: ResourceWarning: unclosed file <_io.TextIOWrapper name=21 encoding='UTF-8'>
+  if method() is not None:
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.12/unittest/case.py:589: ResourceWarning: unclosed file <_io.TextIOWrapper name=23 encoding='UTF-8'>
+  if method() is not None:
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_auth_token_enforced (test_http_transport.TestHttpTransport.test_auth_token_enforced) ... ok
+test_full_flow_over_http_verifies_trusted (test_http_transport.TestHttpTransport.test_full_flow_over_http_verifies_trusted) ... ok
+test_get_and_unknown_paths (test_http_transport.TestHttpTransport.test_get_and_unknown_paths) ... ok
+test_initialize_tools_list_and_session_header (test_http_transport.TestHttpTransport.test_initialize_tools_list_and_session_header) ... ok
+test_notification_returns_202 (test_http_transport.TestHttpTransport.test_notification_returns_202) ... ok
+test_parse_error_and_invalid_request (test_http_transport.TestHttpTransport.test_parse_error_and_invalid_request) ... ok
+test_sse_response_mode (test_http_transport.TestHttpTransport.test_sse_response_mode) ... ok
+test_expiry_during_start_defers_to_post_run_seal (test_lifecycle_race.TestLifecycleRace.test_expiry_during_start_defers_to_post_run_seal) ... ok
+test_kill_during_start_defers_and_keeps_receipts_monotonic (test_lifecycle_race.TestLifecycleRace.test_kill_during_start_defers_and_keeps_receipts_monotonic) ... ok
+test_kill_live_run_terminates_after_execution (test_lifecycle_race.TestLifecycleRace.test_kill_live_run_terminates_after_execution) ... ok
+test_missing_systemctl_falls_back_without_signalling_test_process (test_lifecycle_race.TestLifecycleRace.test_missing_systemctl_falls_back_without_signalling_test_process) ... ok
+test_stale_kill_request_cannot_bind_a_late_start (test_lifecycle_race.TestLifecycleRace.test_stale_kill_request_cannot_bind_a_late_start) ... ok
+test_start_rejected_after_seal_emits_no_execution (test_lifecycle_race.TestLifecycleRace.test_start_rejected_after_seal_emits_no_execution) ... ok
+test_successful_systemctl_signal_does_not_fall_back (test_lifecycle_race.TestLifecycleRace.test_successful_systemctl_signal_does_not_fall_back) ... ok
+test_systemctl_nonzero_falls_back_to_journaled_process_group (test_lifecycle_race.TestLifecycleRace.test_systemctl_nonzero_falls_back_to_journaled_process_group) ... ok
+test_systemctl_oserror_falls_back_to_journaled_process_group (test_lifecycle_race.TestLifecycleRace.test_systemctl_oserror_falls_back_to_journaled_process_group) ... ok
+test_exec_enforces_slot_binding_and_single_use (test_mcp.TestMcpInProcess.test_exec_enforces_slot_binding_and_single_use) ... ok
+test_exec_without_token_is_rejected (test_mcp.TestMcpInProcess.test_exec_without_token_is_rejected) ... ok
+test_full_flow_over_mcp (test_mcp.TestMcpInProcess.test_full_flow_over_mcp) ... ok
+test_initialize_and_ping (test_mcp.TestMcpInProcess.test_initialize_and_ping) ... ok
+test_method_not_found (test_mcp.TestMcpInProcess.test_method_not_found) ... ok
+test_pass_verify_tool_returns_claims_and_registry (test_mcp.TestMcpInProcess.test_pass_verify_tool_returns_claims_and_registry) ... ok
+test_status_reports_effective_runner (test_mcp.TestMcpInProcess.test_status_reports_effective_runner) ... ok
+test_tool_errors_are_structured (test_mcp.TestMcpInProcess.test_tool_errors_are_structured) ... ok
+test_tools_list_is_the_contract_surface (test_mcp.TestMcpInProcess.test_tools_list_is_the_contract_surface) ... ok
+test_slice_without_runner_rejected (test_mcp.TestMcpSubprocess.test_slice_without_runner_rejected) ... ok
+test_stdio_end_to_end (test_mcp.TestMcpSubprocess.test_stdio_end_to_end) ... /usr/lib/python3.12/unittest/case.py:589: ResourceWarning: unclosed file <_io.TextIOWrapper name=17 encoding='UTF-8'>
+  if method() is not None:
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.12/unittest/case.py:589: ResourceWarning: unclosed file <_io.TextIOWrapper name=22 encoding='UTF-8'>
+  if method() is not None:
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_stdio_refuses_without_runner_or_demo (test_mcp.TestMcpSubprocess.test_stdio_refuses_without_runner_or_demo) ... ok
+test_cross_process_chain_continuity (test_orchestrator.TestGateLite.test_cross_process_chain_continuity)
+CLI reality: every command is a new process; chains must reload from disk. ... ok
+test_cross_tenant_denied (test_orchestrator.TestGateLite.test_cross_tenant_denied) ... ok
+test_exec_idempotency_key_rejects_changed_payload (test_orchestrator.TestGateLite.test_exec_idempotency_key_rejects_changed_payload) ... ok
+test_exec_idempotency_keys_are_tenant_scoped (test_orchestrator.TestGateLite.test_exec_idempotency_keys_are_tenant_scoped) ... ok
+test_exec_idempotent_replay_denies_cross_tenant (test_orchestrator.TestGateLite.test_exec_idempotent_replay_denies_cross_tenant) ... ok
+test_exec_idempotent_replay_requires_token (test_orchestrator.TestGateLite.test_exec_idempotent_replay_requires_token)
+#203: cached exec results must not be returned without authorization. ... ok
+test_exec_rejects_token_for_other_agent (test_orchestrator.TestGateLite.test_exec_rejects_token_for_other_agent) ... ok
+test_exec_requires_token (test_orchestrator.TestGateLite.test_exec_requires_token) ... ok
+test_full_dogfood_flow_verifies_trusted (test_orchestrator.TestGateLite.test_full_dogfood_flow_verifies_trusted) ... ok
+test_idempotent_replay (test_orchestrator.TestGateLite.test_idempotent_replay) ... ok
+test_pass_claims_and_receipt_binding (test_orchestrator.TestGateLite.test_pass_claims_and_receipt_binding)
+S2b: the pass token carries pass/slot/mandate identity and the ... ok
+test_pass_idempotency_key_rejects_changed_request (test_orchestrator.TestGateLite.test_pass_idempotency_key_rejects_changed_request) ... ok
+test_pass_idempotency_keys_are_tenant_agent_scoped (test_orchestrator.TestGateLite.test_pass_idempotency_keys_are_tenant_agent_scoped) ... ok
+test_pass_idempotent_replay_requires_membership (test_orchestrator.TestGateLite.test_pass_idempotent_replay_requires_membership)
+#204: cached passes (with tokens) must not bypass membership. ... ok
+test_pass_rejects_unregistered_agent (test_orchestrator.TestGateLite.test_pass_rejects_unregistered_agent) ... ok
+test_receipt_persisted_and_pass_token_roundtrips (test_orchestrator.TestGateLite.test_receipt_persisted_and_pass_token_roundtrips) ... ok
+test_replay_holds_under_concurrent_requests (test_orchestrator.TestGateLite.test_replay_holds_under_concurrent_requests) ... ok
+test_replay_rejected_and_survives_restart (test_orchestrator.TestGateLite.test_replay_rejected_and_survives_restart) ... ok
+test_spend_cap_enforced_at_settlement (test_orchestrator.TestGateLite.test_spend_cap_enforced_at_settlement) ... ok
+test_status_reports_effective_runner (test_orchestrator.TestGateLite.test_status_reports_effective_runner) ... ok
+test_unknown_tenant_rejected (test_orchestrator.TestGateLite.test_unknown_tenant_rejected) ... ok
+test_cli_construction_refusal_is_json_without_traceback (test_preflight_errors.TestPreflightErrors.test_cli_construction_refusal_is_json_without_traceback) ... ok
+test_dependency_version_mismatch_has_stable_metadata (test_preflight_errors.TestPreflightErrors.test_dependency_version_mismatch_has_stable_metadata) ... ok
+test_disappearing_runner_dependency_is_a_typed_refusal (test_preflight_errors.TestPreflightErrors.test_disappearing_runner_dependency_is_a_typed_refusal) ... ok
+test_imported_runtime_must_support_pinned_spec (test_preflight_errors.TestPreflightErrors.test_imported_runtime_must_support_pinned_spec) ... ok
+test_mcp_profile_refusal_precedes_token_burn_and_payload (test_preflight_errors.TestPreflightErrors.test_mcp_profile_refusal_precedes_token_burn_and_payload) ... ok
+test_mcp_startup_refusal_keeps_stdio_request_loop_alive (test_preflight_errors.TestPreflightErrors.test_mcp_startup_refusal_keeps_stdio_request_loop_alive) ... ok
+test_missing_runtime_is_typed (test_preflight_errors.TestPreflightErrors.test_missing_runtime_is_typed) ... ok
+test_bwrap_digest_mismatch_is_rejected_before_wrapper_invocation (test_qualify_bwrap_runner.QualifyBwrapTests.test_bwrap_digest_mismatch_is_rejected_before_wrapper_invocation) ... ok
+test_changed_bwrap_during_probe_is_rejected (test_qualify_bwrap_runner.QualifyBwrapTests.test_changed_bwrap_during_probe_is_rejected) ... ok
+test_changed_wrapper_digest_is_rejected_before_probe (test_qualify_bwrap_runner.QualifyBwrapTests.test_changed_wrapper_digest_is_rejected_before_probe) ... ok
+test_changed_wrapper_during_probe_is_rejected (test_qualify_bwrap_runner.QualifyBwrapTests.test_changed_wrapper_during_probe_is_rejected) ... ok
+test_failed_namespace_or_write_probe_is_not_qualified (test_qualify_bwrap_runner.QualifyBwrapTests.test_failed_namespace_or_write_probe_is_not_qualified) ... ok
+test_missing_bwrap_fails_closed (test_qualify_bwrap_runner.QualifyBwrapTests.test_missing_bwrap_fails_closed) ... ok
+test_observed_bwrap_hash_without_expected_digest_is_explicitly_unpinned (test_qualify_bwrap_runner.QualifyBwrapTests.test_observed_bwrap_hash_without_expected_digest_is_explicitly_unpinned) ... ok
+test_passed_fixed_probe_captures_identity_argv_and_open_classification (test_qualify_bwrap_runner.QualifyBwrapTests.test_passed_fixed_probe_captures_identity_argv_and_open_classification) ... ok
+test_consume_jti_is_atomic_and_durable (test_registry.TestRegistry.test_consume_jti_is_atomic_and_durable) ... ok
+test_corrupt_idempotency_record_survives_upsert (test_registry.TestRegistry.test_corrupt_idempotency_record_survives_upsert) ... ok
+test_legacy_json_migration (test_registry.TestRegistry.test_legacy_json_migration) ... ok
+test_persistence_across_instances (test_registry.TestRegistry.test_persistence_across_instances) ... ok
+test_put_many_replaces (test_registry.TestRegistry.test_put_many_replaces) ... ok
+test_reload_shape (test_registry.TestRegistry.test_reload_shape) ... ok
+test_roundtrip_all_sections (test_registry.TestRegistry.test_roundtrip_all_sections) ... ok
+test_tenant_scoping_and_order (test_registry.TestRegistry.test_tenant_scoping_and_order) ... ok
+test_exec_refused_after_expiry (test_restore.TestExpirySweep.test_exec_refused_after_expiry) ... ok
+test_sweep_scoped_to_tenant (test_restore.TestExpirySweep.test_sweep_scoped_to_tenant) ... ok
+test_sweep_seals_expired_slot (test_restore.TestExpirySweep.test_sweep_seals_expired_slot) ... ok
+test_gate_key_is_owner_only (test_restore.TestKeyHardening.test_gate_key_is_owner_only) ... ok
+test_cross_tenant_restore_denied (test_restore.TestRestore.test_cross_tenant_restore_denied) ... ok
+test_restore_requires_placed_slot (test_restore.TestRestore.test_restore_requires_placed_slot) ... ok
+test_snapshot_destroy_recreate_restore_roundtrip (test_restore.TestRestore.test_snapshot_destroy_recreate_restore_roundtrip) ... ok
+test_tampered_artifact_rejected (test_restore.TestRestore.test_tampered_artifact_rejected) ... ok
+test_cached_exec_cannot_bypass_unqualified_profile (test_runner_profile.TestRunnerProfileFailClosed.test_cached_exec_cannot_bypass_unqualified_profile) ... ok
+test_changed_executable_fails_before_spawn (test_runner_profile.TestRunnerProfileFailClosed.test_changed_executable_fails_before_spawn) ... ok
+test_class_mismatch_fails_before_spawn (test_runner_profile.TestRunnerProfileFailClosed.test_class_mismatch_fails_before_spawn) ... ok
+test_imported_receipt_code_must_support_pinned_spec (test_runner_profile.TestRunnerProfileFailClosed.test_imported_receipt_code_must_support_pinned_spec) ... ok
+test_matching_wrapper_still_requires_pinned_bwrap_and_jq (test_runner_profile.TestRunnerProfileFailClosed.test_matching_wrapper_still_requires_pinned_bwrap_and_jq) ... ok
+test_missing_profile_is_unknown_and_refuses_before_spawn (test_runner_profile.TestRunnerProfileFailClosed.test_missing_profile_is_unknown_and_refuses_before_spawn) ... ok
+test_missing_runner_executable_fails_closed (test_runner_profile.TestRunnerProfileFailClosed.test_missing_runner_executable_fails_closed) ... ok
+test_non_executable_runner_fails_closed (test_runner_profile.TestRunnerProfileFailClosed.test_non_executable_runner_fails_closed) ... ok
+test_profile_binds_exact_argv_and_executable (test_runner_profile.TestRunnerProfileFailClosed.test_profile_binds_exact_argv_and_executable) ... ok
+test_profile_identity_tampering_fails_before_spawn (test_runner_profile.TestRunnerProfileFailClosed.test_profile_identity_tampering_fails_before_spawn) ... ok
+test_profile_status_tampering_fails_before_spawn (test_runner_profile.TestRunnerProfileFailClosed.test_profile_status_tampering_fails_before_spawn) ... ok
+test_status_reports_runner_identity_and_stub_receipt_class_agrees (test_runner_profile.TestRunnerProfileFailClosed.test_status_reports_runner_identity_and_stub_receipt_class_agrees) ... ok
+test_stub_status_identity_is_explicitly_simulated (test_runner_profile.TestRunnerProfileFailClosed.test_stub_status_identity_is_explicitly_simulated) ... ok
+test_unexpected_receipt_dependency_version_rejected (test_runner_profile.TestRunnerProfileFailClosed.test_unexpected_receipt_dependency_version_rejected) ... ok
+test_delivery_response_hash_comes_from_persisted_execution_after_restart (test_settlement_restart.TestSettlementRestart.test_delivery_response_hash_comes_from_persisted_execution_after_restart) ... ok
+test_pre_execution_settlement_keeps_explicit_none_sentinel (test_settlement_restart.TestSettlementRestart.test_pre_execution_settlement_keeps_explicit_none_sentinel) ... ok
+test_intentional_runner_overrides_are_restored_after_scrubbing (test_test_env.TestControlledTestEnvironment.test_intentional_runner_overrides_are_restored_after_scrubbing) ... ok
+test_polluted_runner_hints_are_cleared_but_path_and_python_imports_survive (test_test_env.TestControlledTestEnvironment.test_polluted_runner_hints_are_cleared_but_path_and_python_imports_survive) ... ok
+test_canonical_determinism (test_vectors.TestPrimitives.test_canonical_determinism) ... ok
+test_chain_link_tamper_detected (test_vectors.TestPrimitives.test_chain_link_tamper_detected) ... ok
+test_did_key_roundtrip (test_vectors.TestPrimitives.test_did_key_roundtrip) ... ok
+test_float_rejected (test_vectors.TestPrimitives.test_float_rejected) ... ok
+test_all_vectors (test_vectors.TestVectors.test_all_vectors) ... ok
+
+----------------------------------------------------------------------
+Ran 137 tests in 16.993s
+
+OK (skipped=6)

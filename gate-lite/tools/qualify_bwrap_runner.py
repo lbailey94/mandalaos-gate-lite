@@ -118,7 +118,7 @@ def _empty_evidence(wrapper_path: str, expected_wrapper_sha256: str | None) -> d
             "A passing same-host probe does not assign a receipt sandbox_class or close classification/adoption.",
             "The namespace comparison does not prove outbound network denial to every destination.",
             "This is not independent-host adoption evidence.",
-            "The wrapper parses JSON argument strings through line-oriented mapfile; this probe uses a one-line encoded Python trampoline and does not qualify newline-containing payload arguments.",
+            "This fixed probe uses a one-line encoded Python trampoline and does not itself qualify newline-containing payload arguments; run the wrapper argv tests separately.",
         ],
     }
 

@@ -1,0 +1,57 @@
+{
+  "public_repository": "lbailey94/mandalaos-gate-lite",
+  "public_packet_commit": "1357c147410e2471872cb0658d93199457461e65",
+  "tag_object": "5b369e82572c5fff7e9a20f47a0959573bcc400a",
+  "tag": "bwrap-v1-packet",
+  "pin_policy": "exercise uses immutable complete-packet commit, not tag ref",
+  "authentication": "none; curl -q with no token/cookie/netrc options and allowlisted environment; git credential helpers disabled",
+  "environment_names": [
+    "GIT_CONFIG_GLOBAL",
+    "GIT_CONFIG_NOSYSTEM",
+    "GIT_TERMINAL_PROMPT",
+    "LANG",
+    "PATH"
+  ],
+  "files": [
+    {
+      "file": "LICENSE",
+      "url": "https://raw.githubusercontent.com/lbailey94/mandalaos-gate-lite/1357c147410e2471872cb0658d93199457461e65/gate-lite/runners/bwrap-v1/LICENSE",
+      "http_status": 200,
+      "sha256": "6cca23abb7245d65ae56e3098d964e75546f7b5038cfacf0f908db897794e47a"
+    },
+    {
+      "file": "README.md",
+      "url": "https://raw.githubusercontent.com/lbailey94/mandalaos-gate-lite/1357c147410e2471872cb0658d93199457461e65/gate-lite/runners/bwrap-v1/README.md",
+      "http_status": 200,
+      "sha256": "ff13e0c06fce05cd9c136f88f5bed8b24fa3b37e0ab26bd77e3a1eb33288bae5"
+    },
+    {
+      "file": "SOURCE-ATTRIBUTION.md",
+      "url": "https://raw.githubusercontent.com/lbailey94/mandalaos-gate-lite/1357c147410e2471872cb0658d93199457461e65/gate-lite/runners/bwrap-v1/SOURCE-ATTRIBUTION.md",
+      "http_status": 200,
+      "sha256": "52de1743db54ee1128c8c75af63b7a18e6238f6d1203334e62f30a87781ac8bd"
+    },
+    {
+      "file": "PROVENANCE.json",
+      "url": "https://raw.githubusercontent.com/lbailey94/mandalaos-gate-lite/1357c147410e2471872cb0658d93199457461e65/gate-lite/runners/bwrap-v1/PROVENANCE.json",
+      "http_status": 200,
+      "sha256": "2980ab0580b53e4feddc7bf89994f8cee9ebdd5d93cec984d0bd686d4d61ba1f"
+    },
+    {
+      "file": "SHA256SUMS",
+      "url": "https://raw.githubusercontent.com/lbailey94/mandalaos-gate-lite/1357c147410e2471872cb0658d93199457461e65/gate-lite/runners/bwrap-v1/SHA256SUMS",
+      "http_status": 200,
+      "sha256": "eb6ded69d740aeb5919eeaf9e8602b923fbd6eca7a21391db41a8bdd4fe99142"
+    },
+    {
+      "file": "mandala-sandbox",
+      "url": "https://raw.githubusercontent.com/lbailey94/mandalaos-gate-lite/1357c147410e2471872cb0658d93199457461e65/gate-lite/runners/bwrap-v1/mandala-sandbox",
+      "http_status": 200,
+      "sha256": "f7da8d6c3809ac5adbc4631c82fb9327abdb69638715bb0ea1493dc79996411e"
+    }
+  ],
+  "manifest_pass": true,
+  "wrapper_sha256": "f7da8d6c3809ac5adbc4631c82fb9327abdb69638715bb0ea1493dc79996411e",
+  "wrapper_mode": "755",
+  "disposition": "anonymous public acquisition on existing host; not independent adoption"
+}

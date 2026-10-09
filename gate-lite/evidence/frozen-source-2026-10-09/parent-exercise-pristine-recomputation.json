@@ -1,0 +1,23 @@
+{
+  "capture": "exercise-pristine",
+  "receipt_count": 7,
+  "bundle_sha256": "sha256:e6f6031492e80a221c266f3c28e64e717b748ecc4557dd2b0e03d1a4aa6b61f5",
+  "computed": {
+    "commitment_count": 3,
+    "commitment_head_digest": "sha256:3f0332f9f35259c5800fed1c41c2b23050290598219b8ac57c8a26634e9c75d2",
+    "invocation_digest": "sha256:a9fad7234f167f453cb228c89b989d668c212abb234e370ecb0d01df9170b03c",
+    "fixed_stdout_hash": "sha256:9f59b53267f2c28054c2b951bfbbb6602482b168e0540debb2f8bcbe15e8243f"
+  },
+  "checks": {
+    "count": true,
+    "head": true,
+    "invocation": true,
+    "stdout": true,
+    "delivery": true,
+    "public_wrapper": true,
+    "settlement_zero": true,
+    "idempotency_empty": true,
+    "privacy_markers_absent": true
+  },
+  "pass": true
+}
