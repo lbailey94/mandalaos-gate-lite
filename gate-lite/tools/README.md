@@ -7,6 +7,11 @@ and mount namespace identities, verifies the `/workspace` read-only bind,
 attempts a write there, and checks that `/tmp` is a writable tmpfs. Its test
 workspace is temporary; the intended denied write leaves no host artifact.
 
+The pinned wrapper bytes are published in this repository at
+`gate-lite/runners/bwrap-v1/` (MIT packet; acquisition ref `bwrap-v1-packet`,
+verify with `sha256sum -c SHA256SUMS`). The default path and digest below
+remain the rehearsal values.
+
 Run it from the gate-lite directory:
 
 ```sh

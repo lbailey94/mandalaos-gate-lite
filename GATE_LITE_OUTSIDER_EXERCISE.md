@@ -30,6 +30,12 @@ the relevant packages (`continuity-receipt`, `cryptography`, `cffi`,
 
 ## 3. Steps (as documented in `gate-lite/README.md`)
 
+> **Wrapper acquisition (2026-10-08):** the pinned wrapper is published in this
+> repository at `gate-lite/runners/bwrap-v1/` (MIT packet). Acquire it at the
+> `bwrap-v1-packet` ref and verify with `sha256sum -c SHA256SUMS`; see that
+> directory's `README.md`. This protocol v1 remains the historical flow; the
+> 0.5 protocol update travels with the selective port.
+
 ```bash
 mkdir -p <workspace>/src
 git -C MANDALA_OS archive <sha> | tar -x -C <workspace>/src
