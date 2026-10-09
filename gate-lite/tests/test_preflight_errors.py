@@ -37,6 +37,75 @@ class TestPreflightErrors(unittest.TestCase):
                 Orchestrator("unused")
         self.assertEqual(caught.exception.code, "dependency_missing")
 
+    def test_imported_runtime_version_must_match_exact_distribution_before_state_creation(self):
+        import gate_lite.orchestrator as orchestrator
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "state"
+            self.assertIn("continuity-receipt/0.5", orchestrator.records.SUPPORTED_SPECS)
+            with patch("importlib.metadata.version", return_value="0.5.0"):
+                with patch.object(orchestrator, "RECEIPT_RUNTIME_VERSION", "0.4.0"):
+                    with self.assertRaises(PreflightError) as caught:
+                        Orchestrator(state)
+            self.assertFalse(state.exists())
+            self.assertFalse((state / "gate.key").exists())
+        error = caught.exception.as_dict()
+        self.assertEqual(error["error"], "dependency_runtime_mismatch")
+        self.assertEqual(error["expected"], "continuity-receipt==0.5.0")
+        self.assertEqual(error["found"], "0.4.0")
+        self.assertEqual(error["action"], "reinstall continuity-receipt==0.5.0")
+
+    def test_cli_imported_runtime_drift_is_typed_and_creates_no_state_or_key(self):
+        code = (
+            "import importlib.metadata,sys; "
+            "importlib.metadata.version=lambda _: '0.5.0'; "
+            "import gate_lite.orchestrator as o; o.RECEIPT_RUNTIME_VERSION='0.4.0'; "
+            "from gate_lite.ctl import main; "
+            "sys.exit(main(['--state',sys.argv[1],'status','--tenant','t','--slot','s']))"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "state"
+            proc = subprocess.run(
+                [sys.executable, "-c", code, str(state)], cwd=ROOT, capture_output=True,
+                text=True, timeout=20, env=self.clean_env(),
+            )
+            self.assertFalse(state.exists())
+            self.assertFalse((state / "gate.key").exists())
+        self.assertEqual(proc.returncode, 3)
+        error = json.loads(proc.stderr)
+        self.assertEqual(error["error"], "dependency_runtime_mismatch")
+        self.assertEqual(error["expected"], "continuity-receipt==0.5.0")
+        self.assertEqual(error["found"], "0.4.0")
+        self.assertNotIn("Traceback", proc.stderr)
+
+    def test_mcp_imported_runtime_drift_is_typed_and_creates_no_state_or_key(self):
+        requests = [
+            {"jsonrpc": "2.0", "id": 1, "method": "initialize"},
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "mandala.status", "arguments": {"slot": "x"}}},
+        ]
+        code = (
+            "import importlib.metadata,sys; "
+            "importlib.metadata.version=lambda _: '0.5.0'; "
+            "import gate_lite.orchestrator as o; o.RECEIPT_RUNTIME_VERSION='0.4.0'; "
+            "from gate_lite.mcp_server import main; "
+            "sys.exit(main(['--state',sys.argv[1],'--tenant','t','--demo']))"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "state"
+            proc = subprocess.run(
+                [sys.executable, "-c", code, str(state)], cwd=ROOT,
+                input="\n".join(json.dumps(item) for item in requests) + "\n",
+                capture_output=True, text=True, timeout=20, env=self.clean_env(),
+            )
+            self.assertFalse(state.exists())
+            self.assertFalse((state / "gate.key").exists())
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        responses = [json.loads(line) for line in proc.stdout.splitlines()]
+        self.assertEqual([item["id"] for item in responses], [1, 2])
+        refusal = json.loads(responses[1]["result"]["content"][0]["text"])
+        self.assertEqual(refusal["error"], "dependency_runtime_mismatch")
+        self.assertEqual(refusal["expected"], "continuity-receipt==0.5.0")
+        self.assertEqual(refusal["found"], "0.4.0")
+
     def test_imported_runtime_must_support_pinned_spec(self):
         import gate_lite.orchestrator as orchestrator
         with tempfile.TemporaryDirectory() as tmp:

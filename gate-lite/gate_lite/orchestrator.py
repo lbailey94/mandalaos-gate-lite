@@ -498,6 +498,14 @@ class Orchestrator:
                 expected=f"continuity-receipt=={RECEIPT_PACKAGE_VERSION}", found=receipt_version,
                 action="install continuity-receipt==0.5.0",
             )
+        if RECEIPT_RUNTIME_VERSION != receipt_version:
+            raise PreflightError(
+                "dependency_runtime_mismatch",
+                "imported continuity-receipt runtime does not match the installed distribution",
+                expected=f"continuity-receipt=={RECEIPT_PACKAGE_VERSION}",
+                found=RECEIPT_RUNTIME_VERSION,
+                action="reinstall continuity-receipt==0.5.0",
+            )
         if RECEIPT_SPEC not in records.SUPPORTED_SPECS:
             raise PreflightError(
                 "dependency_spec_unsupported",
