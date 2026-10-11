@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "profile_id": "urn:mandala:runner-profile:gap-mesh-7369",
+  "version": "1.0.0",
+  "title": "Mandala Gate-Lite Wire Protocol 7369 Sovereign Mesh Runner Profile",
+  "description": "Restricted peer-to-peer runner profile enabling sub-millisecond Gap-Junction codon streaming across Wire Protocol 7369 between Ed25519-authenticated nodes, while failing closed on arbitrary cloud/HTTP egress.",
+  "sandbox_class": "bwrap",
+  "network_policy": {
+    "mode": "restricted_p2p_mesh",
+    "permitted_ports": [7369],
+    "protocol": "rfc-7369-gap-junction",
+    "transport": "tcp_nodelay",
+    "dns_permitted": false,
+    "cloud_egress_permitted": false,
+    "raw_socket_permitted": false,
+    "mutual_auth": "ed25519_dalek_dalek",
+    "loopback_allowed": true,
+    "wan_peer_pinning": "allowlist_only"
+  },
+  "filesystem_policy": {
+    "root_ro": true,
+    "workspace_mount": "/workspace",
+    "workspace_rw": false,
+    "tmpfs": "/tmp",
+    "proc_ro": true,
+    "dev_minimal": true
+  },
+  "environment": {
+    "WM_SANDBOXED": "1",
+    "WM_MESH_PROFILE": "gap-junction-7369",
+    "WM_MESH_PORT": "7369",
+    "WM_MESH_ALLOW_REMOTE": "1"
+  },
+  "provenance": {
+    "ratified_by": "lbailey94",
+    "standard": "Mandala OS Sovereign Containment & Gate-Lite 0.5",
+    "target_substrates": ["whitemagic-gen3", "mandalaos-sovereign"]
+  }
+}
