@@ -415,6 +415,8 @@ class TestMcpSubprocess(unittest.TestCase):
             self.assertIn(receipt["verdict"]["verdict"], ("TRUSTED", "PROVISIONAL"))
             proc.stdin.close()
             proc.wait(timeout=10)
+            proc.stdout.close()
+            proc.stderr.close()
 
     def test_stdio_refuses_without_runner_or_demo(self):
         with tempfile.TemporaryDirectory() as tmp:
