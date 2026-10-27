@@ -462,24 +462,23 @@ class SliceRunner(SandboxRunner):
 
 
 def build_runner(runner_path: str | None, slice_mode: bool = False):
-    if not runner_path:
-        return None
     profile_names = (
         "WM_GATELITE_PROFILE", "WM_GATELITE_RUNNER_PROFILE",
         "GATE_LITE_RUNNER_PROFILE", "WM_MESH_PROFILE",
     )
-    requested_profile = next((os.environ[name] for name in profile_names if os.environ.get(name)), None)
     mesh_request = next((
         (name, os.environ[name]) for name in ("WM_MESH_PORT", "WM_MESH_ALLOW_REMOTE")
         if os.environ.get(name)
     ), None)
-    if requested_profile and requested_profile not in (PROFILE_ID, "bwrap-v1"):
-        raise RunnerProfileError(
-            "requested runner profile has no executable reviewed adapter",
-            expected=PROFILE_ID,
-            found=requested_profile,
-            action="select the reviewed bwrap-v1 profile or omit the profile request",
-        )
+    for name in profile_names:
+        requested_profile = os.environ.get(name)
+        if requested_profile and requested_profile not in (PROFILE_ID, "bwrap-v1"):
+            raise RunnerProfileError(
+                "requested runner profile has no executable reviewed adapter",
+                expected=PROFILE_ID,
+                found=requested_profile,
+                action="select the reviewed bwrap-v1 profile or omit the profile request",
+            )
     if mesh_request:
         name, value = mesh_request
         raise RunnerProfileError(
@@ -488,6 +487,8 @@ def build_runner(runner_path: str | None, slice_mode: bool = False):
             found=f"{name}={value}",
             action="remove mesh settings until a reviewed mesh adapter is available",
         )
+    if not runner_path:
+        return None
     return SliceRunner(runner_path) if slice_mode else SandboxRunner(runner_path)
 
 

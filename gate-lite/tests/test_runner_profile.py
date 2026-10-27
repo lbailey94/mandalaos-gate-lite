@@ -121,6 +121,47 @@ class TestRunnerProfileFailClosed(unittest.TestCase):
             with self.assertRaisesRegex(RunnerProfileError, "identity unavailable"):
                 SandboxRunner(str(Path(tmp) / "missing"))
 
+    def test_supported_profile_alias_cannot_hide_an_unsupported_mesh_selection(self):
+        with patch.dict("os.environ", {
+            "WM_GATELITE_PROFILE": "bwrap-v1",
+            "WM_MESH_PROFILE": "gap-junction-7369",
+        }, clear=True):
+            for runner_path in (None, "/not-created/runner"):
+                with self.subTest(runner_path=runner_path), self.assertRaisesRegex(
+                    RunnerProfileError, "no executable reviewed adapter"
+                ):
+                    build_runner(runner_path)
+
+    def test_cli_demo_mesh_refuses_before_creating_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "state"
+            stderr = io.StringIO()
+            with patch.dict("os.environ", {"WM_MESH_PROFILE": "gap-junction-7369"}, clear=True), \
+                    contextlib.redirect_stderr(stderr):
+                code = ctl.main(["--demo", "--state", str(state), "tenant-add",
+                                 "--tenant", "t", "--agent", "did:key:test"])
+            self.assertEqual(code, 3)
+            self.assertEqual(json.loads(stderr.getvalue())["error"], "runner_profile_refused")
+            self.assertFalse(state.exists())
+
+    def test_mcp_demo_mesh_refuses_before_creating_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "state"
+            observed = {}
+            def serve(server):
+                observed["response"] = server.handle({
+                    "jsonrpc": "2.0", "id": 4, "method": "tools/call",
+                    "params": {"name": "mandala.exec", "arguments": {}},
+                })
+                return 0
+            with patch.dict("os.environ", {"WM_MESH_PROFILE": "gap-junction-7369"}, clear=True), \
+                    patch.object(mcp_server, "serve_stdio", side_effect=serve):
+                code = mcp_server.main(["--demo", "--state", str(state), "--tenant", "t"])
+            self.assertEqual(code, 0)
+            self.assertTrue(observed["response"]["result"]["isError"])
+            self.assertIn("no executable reviewed adapter", json.dumps(observed["response"]))
+            self.assertFalse(state.exists())
+
     def test_matching_wrapper_still_requires_pinned_bwrap_and_jq(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "runner"
