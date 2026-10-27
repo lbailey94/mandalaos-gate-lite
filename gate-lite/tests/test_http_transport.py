@@ -177,6 +177,57 @@ class TestHttpTransport(unittest.TestCase):
 
 
 class TestHttpSubprocess(unittest.TestCase):
+    def test_http_refuses_unsupported_mesh_profile_before_state_or_spawn(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            marker = root / "spawned"
+            runner = root / "runner"
+            runner.write_text(f"#!/bin/sh\ntouch {marker}\n", encoding="utf-8")
+            runner.chmod(0o700)
+            proc = subprocess.Popen(
+                [sys.executable, "-m", "gate_lite.mcp_server", "--state", str(root / "state"),
+                 "--tenant", "t", "--transport", "http", "--port", "0"],
+                cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                env=controlled_test_env(overrides={
+                    "WM_GATELITE_RUNNER": str(runner),
+                    "WM_MESH_PROFILE": "gap-junction-7369",
+                    "WM_MESH_PORT": "7369",
+                    "WM_MESH_ALLOW_REMOTE": "1",
+                }),
+            )
+            try:
+                banner = json.loads(proc.stdout.readline())
+                port = banner["port"]
+                status, headers, _ = rpc(
+                    port,
+                    {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                auth = {"Content-Type": "application/json", "Mcp-Session-Id": headers["Mcp-Session-Id"]}
+                status, _, body = rpc(
+                    port,
+                    {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {
+                        "name": "mandala.exec", "arguments": {
+                            "slot": "s", "payload_ref": "touch payload", "token": "synthetic-token"
+                        },
+                    }},
+                    headers=auth,
+                )
+                self.assertEqual(status, 200)
+                response = json.loads(body)["result"]
+                self.assertTrue(response["isError"])
+                refusal = json.loads(response["content"][0]["text"])
+                self.assertEqual(refusal["error"], "runner_profile_refused")
+                self.assertEqual(refusal["found"], "gap-junction-7369")
+                self.assertFalse(marker.exists())
+                self.assertFalse((root / "state").exists())
+            finally:
+                proc.terminate()
+                proc.wait(timeout=10)
+                proc.stdout.close()
+                proc.stderr.close()
+
     def test_subprocess_http_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmp:
             state = Path(tmp)
@@ -242,6 +293,8 @@ class TestHttpSubprocess(unittest.TestCase):
             finally:
                 proc.terminate()
                 proc.wait(timeout=10)
+                proc.stdout.close()
+                proc.stderr.close()
 
 
 if __name__ == "__main__":

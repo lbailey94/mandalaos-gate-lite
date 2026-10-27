@@ -1,9 +1,11 @@
 # gate-lite — Continuity Receipt 0.5 review candidate
 
 Gate-lite is a cooperative-workload orchestrator: pass → execute → settle →
-terminate. This selective public port is a local review candidate. Public main's
-0.4 hold remains the published posture until independent port review and the
-publication decision. See [the root source/evidence boundary](../README.md).
+terminate. The selective 0.5 runtime port merged to public `main` in PR #12;
+current public main is `06e4a87…`. The root README in that public tree still
+describes the old 0.4 baseline and needs a status correction. This checkout is
+a follow-up candidate adding refusal coverage for the proposal-only mesh
+selector. See [the root source/evidence boundary](../README.md).
 
 The package requires Python 3.11+ and exactly `continuity-receipt==0.5.0` from
 PyPI. Distribution metadata, imported runtime version and supported spec are
@@ -92,6 +94,14 @@ consumption or spawn. Hash checks identify the reviewed builds; they do not
 independently prove their behavior. Another host/tool build needs new reviewed
 profile evidence. The original public 0.4 runtime refuses this wrapper because
 its class vocabulary cannot honestly describe Bubblewrap alone.
+
+The proposed `gap-mesh-7369` profile is declarative-only. No executable
+adapter enforces its port allowlist or peer authentication, and the dispatcher
+does not accept it as an execution profile. Its JSON fields are design intent;
+an unknown runner identity remains refused before spawn. Requests for an
+unsupported profile, mesh port, or remote-mesh setting are rejected during
+dispatcher startup, even if the supplied executable otherwise matches a
+supported runner.
 
 ```bash
 RUNNER=$(realpath runners/bwrap-v1/mandala-sandbox)

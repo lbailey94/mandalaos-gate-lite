@@ -2,9 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "profile_id": "urn:mandala:runner-profile:gap-mesh-7369",
   "version": "1.0.0",
-  "title": "Mandala Gate-Lite Wire Protocol 7369 Sovereign Mesh Runner Profile",
-  "description": "Restricted peer-to-peer runner profile enabling sub-millisecond Gap-Junction codon streaming across Wire Protocol 7369 between Ed25519-authenticated nodes, while failing closed on arbitrary cloud/HTTP egress.",
-  "sandbox_class": "bwrap",
+  "title": "Declarative Wire Protocol 7369 profile proposal (not executable)",
+  "description": "Unimplemented policy proposal. Gate-Lite has no runner adapter or evidence enforcing this profile; selecting it for execution is unsupported and must fail closed.",
+  "status": "declarative_only",
+  "execution_enabled": false,
+  "unsupported_reasons": [
+    "No TCP destination/port mediation is implemented.",
+    "No Ed25519 peer authentication is implemented.",
+    "The existing Bubblewrap runner cannot enforce this network policy."
+  ],
   "network_policy": {
     "mode": "restricted_p2p_mesh",
     "permitted_ports": [7369],
@@ -32,8 +38,8 @@
     "WM_MESH_ALLOW_REMOTE": "1"
   },
   "provenance": {
-    "ratified_by": "lbailey94",
-    "standard": "Mandala OS Sovereign Containment & Gate-Lite 0.5",
+    "status": "proposal; no runtime enforcement evidence",
+    "standard": "Mandala Gate-Lite 0.5 candidate",
     "target_substrates": ["whitemagic-gen3", "mandalaos-sovereign"]
   }
 }

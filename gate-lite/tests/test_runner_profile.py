@@ -1,6 +1,9 @@
 """Fail-closed tests for the exact local 0.5 Bubblewrap candidate profile."""
 import tempfile
 import unittest
+import io
+import json
+import contextlib
 from pathlib import Path
 from unittest.mock import patch
 
@@ -9,8 +12,10 @@ from gate_lite.orchestrator import (
     RunnerProfileError,
     SandboxRunner,
     StubRunner,
+    build_runner,
 )
 from gate_lite import orchestrator as profile_module
+from gate_lite import ctl, mcp_server
 
 
 class TestRunnerProfileFailClosed(unittest.TestCase):
@@ -29,10 +34,133 @@ class TestRunnerProfileFailClosed(unittest.TestCase):
             with self.assertRaisesRegex(RunnerProfileError, "no reviewed runner profile"):
                 runner.run({}, "echo should-not-run", on_spawn=lambda *_: self.fail("spawned"))
 
+    def test_unreviewed_mesh_candidate_is_unknown_even_with_mesh_environment(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "mesh-runner"
+            self.make_runner(path)
+            with patch.dict("os.environ", {
+                "WM_SANDBOXED": "1",
+                "WM_MESH_PROFILE": "gap-junction-7369",
+                "WM_MESH_PORT": "7369",
+                "WM_MESH_ALLOW_REMOTE": "1",
+            }):
+                # Even if the executable bytes and dependencies match the
+                # supported profile, an explicit mesh selection is refused.
+                with patch.object(profile_module, "PROFILE_WRAPPER_SHA256", SandboxRunner._digest(str(path))), \
+                     patch.object(SandboxRunner, "_dependencies_match", return_value=True):
+                    with self.assertRaisesRegex(RunnerProfileError, "no executable reviewed adapter"):
+                        build_runner(str(path))
+
+    def test_mesh_port_or_remote_setting_alone_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "mesh-runner"
+            self.make_runner(path)
+            for setting in ({"WM_MESH_PORT": "7369"}, {"WM_MESH_ALLOW_REMOTE": "1"}):
+                with self.subTest(setting=setting), patch.dict("os.environ", setting, clear=True):
+                    with self.assertRaisesRegex(RunnerProfileError, "no executable reviewed adapter"):
+                        build_runner(str(path))
+
+    def test_cli_real_mesh_environment_refuses_before_state_or_payload(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            marker = root / "spawned"
+            runner = root / "runner"
+            runner.write_text(f"#!/bin/sh\ntouch {marker}\n", encoding="utf-8")
+            runner.chmod(0o700)
+            stderr = io.StringIO()
+            with patch.dict("os.environ", {
+                "WM_GATELITE_RUNNER": str(runner),
+                "WM_MESH_PROFILE": "gap-junction-7369",
+                "WM_MESH_PORT": "7369",
+                "WM_MESH_ALLOW_REMOTE": "1",
+            }), contextlib.redirect_stderr(stderr):
+                code = ctl.main(["--state", str(root / "state"), "exec", "--tenant", "t",
+                                 "--slot", "s", "--payload-ref", "touch payload",
+                                 "--token", "synthetic-token"])
+            self.assertEqual(code, 3)
+            refusal = json.loads(stderr.getvalue())
+            self.assertEqual(refusal["error"], "runner_profile_refused")
+            self.assertEqual(refusal["found"], "gap-junction-7369")
+            self.assertFalse(marker.exists())
+            self.assertFalse((root / "state").exists())
+
+    def test_mcp_real_mesh_environment_returns_structured_startup_refusal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            marker = root / "spawned"
+            runner = root / "runner"
+            runner.write_text(f"#!/bin/sh\ntouch {marker}\n", encoding="utf-8")
+            runner.chmod(0o700)
+            observed = {}
+
+            def serve(server):
+                observed["response"] = server.handle({
+                    "jsonrpc": "2.0", "id": 4, "method": "tools/call",
+                    "params": {"name": "mandala.exec", "arguments": {
+                        "slot": "s", "payload_ref": "touch payload", "token": "synthetic-token"
+                    }},
+                })
+                return 0
+
+            with patch.dict("os.environ", {
+                "WM_GATELITE_RUNNER": str(runner),
+                "WM_MESH_PROFILE": "gap-junction-7369",
+                "WM_MESH_PORT": "7369",
+                "WM_MESH_ALLOW_REMOTE": "1",
+            }), patch.object(mcp_server, "serve_stdio", side_effect=serve):
+                code = mcp_server.main(["--state", str(root / "state"), "--tenant", "t"])
+            self.assertEqual(code, 0)
+            result = observed["response"]["result"]
+            self.assertTrue(result["isError"])
+            self.assertIn("no executable reviewed adapter", json.dumps(result))
+            self.assertFalse(marker.exists())
+            self.assertFalse((root / "state").exists())
+
     def test_missing_runner_executable_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaisesRegex(RunnerProfileError, "identity unavailable"):
                 SandboxRunner(str(Path(tmp) / "missing"))
+
+    def test_supported_profile_alias_cannot_hide_an_unsupported_mesh_selection(self):
+        with patch.dict("os.environ", {
+            "WM_GATELITE_PROFILE": "bwrap-v1",
+            "WM_MESH_PROFILE": "gap-junction-7369",
+        }, clear=True):
+            for runner_path in (None, "/not-created/runner"):
+                with self.subTest(runner_path=runner_path), self.assertRaisesRegex(
+                    RunnerProfileError, "no executable reviewed adapter"
+                ):
+                    build_runner(runner_path)
+
+    def test_cli_demo_mesh_refuses_before_creating_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "state"
+            stderr = io.StringIO()
+            with patch.dict("os.environ", {"WM_MESH_PROFILE": "gap-junction-7369"}, clear=True), \
+                    contextlib.redirect_stderr(stderr):
+                code = ctl.main(["--demo", "--state", str(state), "tenant-add",
+                                 "--tenant", "t", "--agent", "did:key:test"])
+            self.assertEqual(code, 3)
+            self.assertEqual(json.loads(stderr.getvalue())["error"], "runner_profile_refused")
+            self.assertFalse(state.exists())
+
+    def test_mcp_demo_mesh_refuses_before_creating_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "state"
+            observed = {}
+            def serve(server):
+                observed["response"] = server.handle({
+                    "jsonrpc": "2.0", "id": 4, "method": "tools/call",
+                    "params": {"name": "mandala.exec", "arguments": {}},
+                })
+                return 0
+            with patch.dict("os.environ", {"WM_MESH_PROFILE": "gap-junction-7369"}, clear=True), \
+                    patch.object(mcp_server, "serve_stdio", side_effect=serve):
+                code = mcp_server.main(["--demo", "--state", str(state), "--tenant", "t"])
+            self.assertEqual(code, 0)
+            self.assertTrue(observed["response"]["result"]["isError"])
+            self.assertIn("no executable reviewed adapter", json.dumps(observed["response"]))
+            self.assertFalse(state.exists())
 
     def test_matching_wrapper_still_requires_pinned_bwrap_and_jq(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -102,6 +230,7 @@ class TestRunnerProfileFailClosed(unittest.TestCase):
             orch = Orchestrator(Path(tmp) / "state", runner=runner)
             orch.add_tenant("tenant", ["did:key:test"])
             issued = orch.pass_("tenant", "did:key:test")
+            claims = orch._verify_exec_token(orch.registry.get_slot(issued["slot_id"]), issued["token"], None)
             # A real run is refused, and no execution receipt is emitted.
             with self.assertRaises(RunnerProfileError):
                 orch.exec_("tenant", issued["slot_id"], "echo blocked", token=issued["token"])
@@ -109,6 +238,8 @@ class TestRunnerProfileFailClosed(unittest.TestCase):
             # again, rather than fail as a replay of a token no run consumed.
             with self.assertRaises(RunnerProfileError):
                 orch.exec_("tenant", issued["slot_id"], "echo blocked", token=issued["token"])
+            self.assertFalse(orch.registry.jti_consumed(claims["jti"]))
+            self.assertEqual(orch.registry.get_slot(issued["slot_id"])["state"], "placed")
             status = orch.status("tenant", issued["slot_id"])["runner"]
             self.assertEqual(status["class"], "unknown")
             self.assertEqual(status["path"], str(runner_path.resolve()))
