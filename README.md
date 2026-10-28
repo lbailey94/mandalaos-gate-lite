@@ -1,9 +1,11 @@
-# MandalaOS — gate-lite 0.5 review candidate
+# Gate-lite — CPR 0.5 selective port
 
-Status: local selective port prepared for independent review, 2026-10-09.
-Public main at `75ebbd6d9fd96bc2b6b33e939970449be97027f3` remains the 0.4
-review snapshot until this port is reviewed and published. This repository
-contains one slice of MandalaOS; it is not a release of the whole system.
+Status: the selective 0.5 port is published on public main through
+[PR #13](https://github.com/lbailey94/mandalaos-gate-lite/pull/13), merged
+27 October 2026 at `19184fa3eed2b1a48a3067a3ca77fc74ad3a06e5`.
+The installable source package is `gate-lite` 0.0.1; 0.5 identifies its CPR
+wire support. This repository contains one slice of MandalaOS, with
+independent review and host qualification still open.
 
 Gate-lite issues governed passes to cooperating agents, supervises a bounded
 execution, and emits signed Continuity Receipts. It exposes a CLI and MCP
@@ -11,7 +13,7 @@ stdio or loopback HTTP. Project site: https://www.whitemagic.dev.
 
 ## Source and evidence boundaries
 
-This candidate selectively ports the accepted private source
+This port selectively carries the accepted private source
 `8e84b2520b535d1452d4966d885411ee7aaea47d` onto public main `75ebbd6…`.
 It preserves the public lifecycle and egress behavior and the historical signed
 evidence. The receipt dependency is exactly `continuity-receipt==0.5.0`;
@@ -29,14 +31,15 @@ reproduction by collaborators. It does not qualify another host or establish
 that this selective public port has passed review. The preserved capture and
 its limits are in [the evidence report](gate-lite/evidence/frozen-source-2026-10-09/REPORT.md).
 
-The port's own exact-commit checks are recorded separately during review.
-Independent port review and the publication decision remain open. The earlier
+PR #13 CI reported 146 tests passed, six skipped, and eight subtests passed
+before the merge. Those same-operator checks do not establish qualification on
+another host. The earlier
 October 8 capture at `8ea8c7e` remains local-reviewed, pre-push; it is not
 relabeled as the later frozen-source exercise. Historical 0.3 and 0.4 bundles,
 raw transcripts, and the committed 0.4 vectors retain their original bytes and
 labels.
 
-## What the candidate changes
+## What the port changes
 
 - New bundles use `continuity-receipt/0.5`, including a `state.commitment`
   over the exact registry snapshot consumed by the commitment method.
@@ -58,6 +61,10 @@ labels.
 ## Run and review
 
 From the repository root, with Python 3.11+:
+
+Install this checkout into its own environment. Keep its exact CPR 0.5.0
+dependency: a newer verifier package is a different qualification target.
+This recipe does not install or replace a global `gate-lite` command.
 
 ```bash
 python3 -m venv .venv
@@ -113,6 +120,7 @@ the wrapper uses its adjacent packet-scoped MIT license. See [NOTICE.md](NOTICE.
 
 The human maintainer, Lucas Bailey, is accountable for the content. AI
 collaborators worked under his direction; implementation and claims remain
-subject to review. Start with [REVIEW_NOTES.md](REVIEW_NOTES.md) for the review
-map. Older dated design and status documents describe their recorded scopes;
-this README describes the candidate under review.
+subject to review. Start with [gate-lite/README.md](gate-lite/README.md) and
+[the outsider exercise](GATE_LITE_OUTSIDER_EXERCISE.md) for the review map.
+Older dated design and status documents describe their recorded scopes;
+this README describes the published selective port.
