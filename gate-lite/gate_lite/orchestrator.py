@@ -132,13 +132,28 @@ def parse_payload(payload_ref: str) -> dict:
     """
     text = payload_ref.strip()
     if text.startswith("{"):
-        data = json.loads(text)
-        if not isinstance(data, dict) or not data.get("program"):
-            raise ValueError("payload envelope needs a 'program'")
-        program = str(data["program"])
-        args = [str(arg) for arg in (data.get("args") or [])]
-        wants_net = bool(data.get("net"))
-        declared = [str(dest) for dest in (data.get("egress") or [])]
+        def unique_members(pairs):
+            result = {}
+            for name, value in pairs:
+                if name in result:
+                    raise ValueError(f"duplicate payload envelope member: {name}")
+                result[name] = value
+            return result
+
+        data = json.loads(text, object_pairs_hook=unique_members)
+        program = data.get("program")
+        if not isinstance(program, str) or not program or "\x00" in program:
+            raise ValueError("payload envelope needs a non-empty string 'program' without NUL")
+        args = data.get("args", [])
+        declared = data.get("egress", [])
+        for name, values in (("args", args), ("egress", declared)):
+            if (not isinstance(values, list)
+                    or any(not isinstance(value, str) or "\x00" in value
+                           or (name == "egress" and not value) for value in values)):
+                raise ValueError(f"payload envelope '{name}' must be an array of strings without NUL")
+        wants_net = data.get("net", False)
+        if not isinstance(wants_net, bool):
+            raise ValueError("payload envelope 'net' must be a boolean")
     else:
         parts = shlex.split(text)
         if not parts:
