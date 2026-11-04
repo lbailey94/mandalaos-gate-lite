@@ -3,9 +3,15 @@
 Status: the selective 0.5 port is published on public main through
 [PR #13](https://github.com/lbailey94/mandalaos-gate-lite/pull/13), merged
 27 October 2026 at `19184fa3eed2b1a48a3067a3ca77fc74ad3a06e5`.
-The installable source package is `gate-lite` 0.0.1; 0.5 identifies its CPR
+The installable source package is `gate-lite` 0.0.2; 0.5 identifies its CPR
 wire support. This repository contains one slice of MandalaOS, with
 independent review and host qualification still open.
+
+The combined working source is now [Mandala](https://github.com/lbailey94/mandala).
+This repository remains the curated review snapshot. Its baseline network grant
+and tool identities do not automatically acquire changes from that combined
+repo. A source archive/commit is a review target; no current GitHub release or
+another-host qualification is implied by the package version.
 
 Gate-lite issues governed passes to cooperating agents, supervises a bounded
 execution, and emits signed Continuity Receipts. It exposes a CLI and MCP
