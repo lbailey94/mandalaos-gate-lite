@@ -133,7 +133,10 @@ class TestStateCommitmentFailure(unittest.TestCase):
             )
 
 
-@unittest.skipIf(os.geteuid() == 0, "chmod-based fault injection is bypassed by root")
+@unittest.skipIf(
+    os.geteuid() == 0,
+    "[ROOT-ONLY SKIP (MAN-03)] chmod 0500 fault injection is bypassed by root (2 tests skipped; expected non-root default skip count is 6, root skip count is 8)",
+)
 class TestFailClosedEmitter(unittest.TestCase):
     """G8: receipt emitter down ⇒ exec refused, no work runs."""
 
