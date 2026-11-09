@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from . import trace_guard
 from .errors import PreflightError
 
 try:
@@ -1032,6 +1033,41 @@ class Orchestrator:
             raise PassError("pass_replayed", "pass token was already used")
         return jti
 
+    def _trace_guard(self, trace_path: str) -> dict:
+        """Evaluate an operator-supplied agent trace and bind its bytes by hash.
+
+        The verdict is evidence, not enforcement: it is recorded inside the
+        task.execution receipt so relying parties can audit PEB-23 property
+        violations without trusting a mutable log file.
+        """
+        path = Path(trace_path)
+        digest = None
+        try:
+            raw = path.read_bytes()
+            digest = hashlib.sha256(raw).hexdigest()
+            data = json.loads(raw.decode("utf-8"))
+            steps = data.get("steps", data.get("trace", [])) if isinstance(data, dict) else data
+            result = trace_guard.guard_trace(steps)
+        except Exception as exc:  # noqa: BLE001 - receipt boundary records the failure
+            return {
+                "ok": False,
+                "error": f"trace guard could not load {path}: {exc}",
+                "trace_sha256": digest,
+            }
+        return {
+            "ok": bool(result.get("ok")),
+            "violations": result.get("violations", []),
+            "original_len": result.get("original_len", 0),
+            "shrunk_len": result.get("shrunk_len", 0),
+            "compression_x1000": (
+                int(round(result["compression"] * 1000))
+                if result.get("compression") is not None
+                else None
+            ),
+            "replay_sha256": result.get("replay_sha256"),
+            "trace_sha256": digest,
+        }
+
     def exec_(
         self,
         tenant_id: str,
@@ -1040,6 +1076,7 @@ class Orchestrator:
         idempotency_key: str | None = None,
         token: str | None = None,
         agent_id: str | None = None,
+        trace_path: str | None = None,
     ) -> dict:
         # Authorization precedes the idempotency cache on every path: a cached
         # result is only returned to a caller that passes the tenant check and
@@ -1141,6 +1178,7 @@ class Orchestrator:
         self._last_exec[slot_id] = result
         self._run_path(slot_id).unlink(missing_ok=True)
 
+        trace_guard_result = self._trace_guard(trace_path) if trace_path else None
         execution_body = {
             "tool_calls": [
                 {
@@ -1163,6 +1201,8 @@ class Orchestrator:
         }
         if runner_profile is not None:
             execution_body["runner_profile"] = runner_profile
+        if trace_guard_result is not None:
+            execution_body["trace_guard"] = trace_guard_result
         execution = self._emit(
             slot,
             "task.execution",
@@ -1201,6 +1241,8 @@ class Orchestrator:
         }
         if result.stderr_hash:
             response["stderr_hash"] = result.stderr_hash
+        if trace_guard_result is not None:
+            response["trace_guard"] = trace_guard_result
 
         termination = None
         final_state = "terminated"

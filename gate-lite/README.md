@@ -1,11 +1,10 @@
 # gate-lite — Continuity Receipt 0.5 review candidate
 
 Gate-lite is a cooperative-workload orchestrator: pass → execute → settle →
-terminate. The selective 0.5 runtime port merged to public `main` in PR #12;
-current public main is `06e4a87…`. The root README in that public tree still
-describes the old 0.4 baseline and needs a status correction. This checkout is
-a follow-up candidate adding refusal coverage for the proposal-only mesh
-selector. See [the root source/evidence boundary](../README.md).
+terminate. The selective 0.5 runtime port merged to public `main` in PR #13,
+with package boundary clarifications in PR #15 and PEB-23 property trace guard
+binding (`trace_guard.py` / `mandala-ctl exec --trace`). See
+[the root source/evidence boundary](../README.md).
 
 The package requires Python 3.11+ and exactly `continuity-receipt==0.5.0` from
 PyPI. Distribution metadata, imported runtime version and supported spec are
@@ -15,13 +14,13 @@ committed `vectors/` remain historical 0.4 compatibility fixtures.
 ## Layout
 
 ```
-gate_lite/                  CLI, MCP, registry, tokens, orchestrator
+gate_lite/                  CLI, MCP, registry, tokens, orchestrator, trace_guard (PEB-23)
 runners/bwrap-v1/            public MIT wrapper packet and provenance
 tools/capture_outsider_05.py token-safe bounded CLI capture
 tools/test_sandbox_argv.py   wrapper argv tests using a capture shim
 tools/qualify_bwrap_runner.py fixed namespace/filesystem probe
 tools/make_vectors.py       explicit-version generation into separate output
-tests/                      hermetic unit tests and opt-in real acceptance
+tests/                      hermetic unit tests (including test_trace_guard.py) and opt-in real acceptance
 vectors/                    preserved historical spec-0.4 corpus
 evidence/                   dated captures, each bound to its own source pin
 ```

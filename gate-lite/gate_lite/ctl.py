@@ -73,6 +73,11 @@ def main(argv=None) -> int:
     token_input.add_argument("--token", help="pass token from `pass` (binds agent + slot, single use)")
     token_input.add_argument("--token-stdin", action="store_true", help="read the pass token from stdin without echoing or logging it")
     exec_cmd.add_argument("--idempotency-key", default=None)
+    exec_cmd.add_argument(
+        "--trace",
+        default=None,
+        help="path to a JSON agent trace evaluated by the PEB-23 trace guard and bound into task.execution",
+    )
 
     settle = sub.add_parser("settle")
     settle.add_argument("--tenant", required=True)
@@ -149,6 +154,7 @@ def main(argv=None) -> int:
                 args.payload_ref,
                 idempotency_key=args.idempotency_key,
                 token=token,
+                trace_path=args.trace,
             )
         elif args.cmd == "settle":
             output = orch.settle(args.tenant, args.slot, args.rail, args.rail_ref, args.minor)

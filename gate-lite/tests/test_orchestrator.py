@@ -44,6 +44,37 @@ class TestGateLite(unittest.TestCase):
             self.assertIn("settlement", types)
             self.assertIn("task.termination", types)
 
+    def test_exec_trace_guard_bound_into_execution_receipt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            orch, agent_did = make_orchestrator(Path(tmp))
+            issued = orch.pass_("dogfood", agent_did)
+            trace_path = Path(tmp) / "trace.json"
+            trace_path.write_text(
+                json.dumps({"steps": [{"type": "claim"}]}), encoding="utf-8"
+            )
+            executed = orch.exec_(
+                "dogfood",
+                issued["slot_id"],
+                "echo traced",
+                token=issued["token"],
+                trace_path=str(trace_path),
+            )
+            self.assertIn("trace_guard", executed)
+            self.assertFalse(executed["trace_guard"]["ok"])
+
+            terminated = orch.terminate("dogfood", issued["slot_id"])
+            bundle = orch.receipt(terminated["task_id"])
+            exec_receipt = next(
+                r for r in bundle["receipts"] if r.get("type") == "task.execution"
+            )
+            guard = exec_receipt["body"]["trace_guard"]
+            self.assertFalse(guard["ok"])
+            self.assertTrue(guard["trace_sha256"])
+            self.assertIn(
+                "EvidenceBeforeClaim",
+                {v["property"] for v in guard["violations"]},
+            )
+
     def test_idempotent_replay(self):
         with tempfile.TemporaryDirectory() as tmp:
             orch, agent_did = make_orchestrator(Path(tmp))

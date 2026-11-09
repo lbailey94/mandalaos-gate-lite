@@ -59,6 +59,11 @@ labels.
   through CLI and MCP. Settlement after restart binds the issuer's delivery
   response to the persisted execution stdout digest. A pre-execution settlement
   retains the explicit `sha256("none")` sentinel.
+- Optional PEB-23 property trace guard (`gate_lite/trace_guard.py`, `mandala-ctl exec --trace <file>`):
+  evaluates deterministic step-stream invariants (`ScopeConfinement`, `AntiThrashLoop`,
+  `ContextAnxietyGuard`, `EvidenceBeforeClaim`, `BudgetMonotonicity`), shrinks failing
+  traces via `ddmin` to a minimal counterexample with `replay_sha256`, and binds the
+  verdict into `task.execution` receipts as signed evidence.
 - Ordinary tests isolate ambient runner settings. Real-runner acceptance and
   wall/OOM quota drills each require explicit opt-in. Vector generation uses
   an explicit spec and a separate output directory; it cannot overwrite the
