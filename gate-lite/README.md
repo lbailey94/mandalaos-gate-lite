@@ -3,7 +3,7 @@
 Gate-lite is a cooperative-workload orchestrator: pass → execute → settle →
 terminate. The selective 0.5 runtime port merged to public `main` in PR #13,
 with package boundary clarifications in PR #15 and PEB-23 property trace guard
-binding (`trace_guard.py` / `mandala-ctl exec --trace`). See
+binding (`trace_guard.py` / `python -m gate_lite.ctl exec --trace`). See
 [the root source/evidence boundary](../README.md).
 
 The package requires Python 3.11+ and exactly `continuity-receipt==0.5.0` from
@@ -34,6 +34,7 @@ python3 -m venv .venv
 .venv/bin/pip install -e .
 .venv/bin/pip check
 PY=.venv/bin/python
+"$PY" -m gate_lite.ctl --help
 "$PY" -m unittest discover -s tests -v
 "$PY" tools/test_sandbox_argv.py -v
 .venv/bin/continuity-receipt-verify vectors/02_happy_full.json
@@ -48,14 +49,15 @@ drills remain unqualified in the accepted October 9 exercise.
 
 ## CLI lifecycle and tokens
 
-For a simulated flow, start Python with `--demo` at exec. Real execution needs
-an explicitly selected qualified runner. `pass` returns the slot and token;
-keep the token out of argv, transcripts, and shell tracing. The copyable real
-flow in [protocol v2](../GATE_LITE_OUTSIDER_EXERCISE.md) uses the capture tool:
+Invoke the CLI as `"$PY" -m gate_lite.ctl`. For a simulated flow, pass `--demo`
+before the `exec` subcommand. Real execution needs an explicitly selected
+qualified runner. `pass` returns the slot and token. Keep the token out of
+argv, transcripts, and shell tracing. For a fresh source export, record its
+exact commit and use the [capture tool](tools/capture_outsider_05.py):
 
 ```bash
 RUNNER=$(realpath runners/bwrap-v1/mandala-sandbox)
-SOURCE_SHA=<full-tested-source-sha>
+SOURCE_SHA='replace-with-the-full-tested-source-sha'
 "$PY" tools/capture_outsider_05.py --out /path/to/new-evidence-directory \
   --runner "$RUNNER" --source-sha "$SOURCE_SHA" --source-status local-reviewed
 ```

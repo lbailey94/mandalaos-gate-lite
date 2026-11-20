@@ -59,7 +59,7 @@ labels.
   through CLI and MCP. Settlement after restart binds the issuer's delivery
   response to the persisted execution stdout digest. A pre-execution settlement
   retains the explicit `sha256("none")` sentinel.
-- Optional PEB-23 property trace guard (`gate_lite/trace_guard.py`, `mandala-ctl exec --trace <file>`):
+- Optional PEB-23 property trace guard (`gate_lite/trace_guard.py`, `python -m gate_lite.ctl exec --trace <file>`):
   evaluates deterministic step-stream invariants (`ScopeConfinement`, `AntiThrashLoop`,
   `ContextAnxietyGuard`, `EvidenceBeforeClaim`, `BudgetMonotonicity`), shrinks failing
   traces via `ddmin` to a minimal counterexample with `replay_sha256`, and binds the
@@ -81,6 +81,7 @@ This recipe does not install or replace a global `gate-lite` command.
 python3 -m venv .venv
 .venv/bin/pip install -e gate-lite
 .venv/bin/pip check
+.venv/bin/python -m gate_lite.ctl --help
 cd gate-lite
 ../.venv/bin/python -m unittest discover -s tests -v
 ../.venv/bin/python tools/test_sandbox_argv.py -v
@@ -88,12 +89,13 @@ cd gate-lite
 ../.venv/bin/continuity-receipt-verify evidence/frozen-source-2026-10-09/bundle-task.json
 ```
 
-The vectors command above checks historical 0.4 compatibility. The captured
-0.5 bundle is evidence for its private source pin, not proof of current port
-execution. Use [protocol v2](GATE_LITE_OUTSIDER_EXERCISE.md) to exercise a fresh,
-exact source export and capture new evidence. CLI/MCP examples and opt-ins are
-in [gate-lite/README.md](gate-lite/README.md); adapter requirements are in
-[INTEGRATION_CONTRACT.md](gate-lite/INTEGRATION_CONTRACT.md).
+The CLI help banner uses `mandala-ctl` as its program name. Run it through
+`python -m gate_lite.ctl` from the virtual environment above. The vectors command
+checks historical 0.4 compatibility. The captured 0.5 bundle is evidence for its
+private source pin. For a fresh source export, follow the
+[lifecycle capture instructions](gate-lite/README.md#cli-lifecycle-and-tokens).
+See [gate-lite/README.md](gate-lite/README.md) for MCP examples and
+[the integration contract](gate-lite/INTEGRATION_CONTRACT.md) for adapter requirements.
 
 The MIT wrapper packet is publicly available at
 [gate-lite/runners/bwrap-v1](gate-lite/runners/bwrap-v1/README.md). Its executable
@@ -132,6 +134,6 @@ the wrapper uses its adjacent packet-scoped MIT license. See [NOTICE.md](NOTICE.
 The human maintainer, Lucas Bailey, is accountable for the content. AI
 collaborators worked under his direction; implementation and claims remain
 subject to review. Start with [gate-lite/README.md](gate-lite/README.md) and
-[the outsider exercise](GATE_LITE_OUTSIDER_EXERCISE.md) for the review map.
+[the frozen-source evidence report](gate-lite/evidence/frozen-source-2026-10-09/REPORT.md).
 Older dated design and status documents describe their recorded scopes;
 this README describes the published selective port.
