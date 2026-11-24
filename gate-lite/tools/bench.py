@@ -133,9 +133,10 @@ def summarize(samples_ms: list) -> dict:
 
 def current_rss_mb() -> float:
     try:
-        for line in Path("/proc/self/status").read_text(encoding="utf-8").splitlines():
-            if line.startswith("VmRSS:"):
-                return int(line.split()[1]) / 1024.0
+        with open("/proc/self/status", encoding="utf-8") as fh:
+            for line in fh:
+                if line.startswith("VmRSS:"):
+                    return int(line.split()[1]) / 1024.0
     except OSError:
         pass
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0

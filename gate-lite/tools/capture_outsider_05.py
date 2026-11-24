@@ -24,6 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+_JWT_RE = re.compile(r"eyJ[\w-]*\.[\w-]+\.[\w-]+")
 
 
 def write_json(path: Path, value) -> None:
@@ -180,7 +181,7 @@ def capture(args) -> int:
             # a signed or commitment-bound artifact impossible to recompute.
             for name, value in artifacts.items():
                 text = json.dumps(value)
-                if token in text or re.search(r"eyJ[\w-]*\.[\w-]+\.[\w-]+", text) or "PRIVATE KEY-----" in text:
+                if token in text or _JWT_RE.search(text) or "PRIVATE KEY-----" in text:
                     raise RuntimeError(f"privacy check failed for {name}; evidence not exported")
             for name, value in artifacts.items():
                 write_json(out / name, value)

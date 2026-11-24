@@ -88,11 +88,17 @@ def rfc3339(epoch: int) -> str:
 def tree_hash(root: Path) -> str:
     """Deterministic hash over file names + contents under `root`."""
     digest = hashlib.sha256()
-    for path in sorted(root.rglob("*")):
+    files: list[Path] = []
+    for dirpath, _, filenames in os.walk(root):
+        base = Path(dirpath)
+        for fn in filenames:
+            files.append(base / fn)
+    for path in sorted(files):
         if path.is_file():
             digest.update(str(path.relative_to(root)).encode("utf-8"))
             digest.update(b"\x00")
-            digest.update(hashlib.sha256(path.read_bytes()).digest())
+            with path.open("rb") as fh:
+                digest.update(hashlib.file_digest(fh, "sha256").digest())
     return "sha256:" + digest.hexdigest()
 
 
@@ -432,18 +438,30 @@ class SliceRunner(SandboxRunner):
         return proc
 
     def _terminate(self, proc) -> None:
-        subprocess.run(
-            ["systemctl", "--user", "kill", "--kill-whom=all", "-s", "SIGKILL", proc.unit],
-            capture_output=True,
-        )
+        try:
+            subprocess.run(
+                ["systemctl", "--user", "kill", "--kill-whom=all", "-s", "SIGKILL", proc.unit],
+                capture_output=True,
+                timeout=15,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            pass
 
     def _inspect_kill(self, slot: dict, proc) -> str | None:
-        show = subprocess.run(
-            ["systemctl", "--user", "show", proc.unit, "-p", "Result", "-p", "MemoryPeak", "--value"],
-            capture_output=True,
-            text=True,
-        )
-        subprocess.run(["systemctl", "--user", "reset-failed", proc.unit], capture_output=True)
+        try:
+            show = subprocess.run(
+                ["systemctl", "--user", "show", proc.unit, "-p", "Result", "-p", "MemoryPeak", "--value"],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            subprocess.run(
+                ["systemctl", "--user", "reset-failed", proc.unit],
+                capture_output=True,
+                timeout=15,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return None
         lines = [line.strip() for line in show.stdout.splitlines() if line.strip()]
         result = lines[0] if lines else ""
         if len(lines) > 1 and lines[1].isdigit():
@@ -741,10 +759,11 @@ class Orchestrator:
                 completed = subprocess.run(
                     ["systemctl", "--user", "kill", "--kill-whom=all", "-s", signal_name, unit],
                     capture_output=True,
+                    timeout=15,
                 )
                 if completed.returncode == 0:
                     return
-            except OSError:
+            except (OSError, subprocess.TimeoutExpired):
                 pass
         sig = getattr(signal_mod, signal_name)
         pgid, pid = run.get("pgid"), run.get("pid")

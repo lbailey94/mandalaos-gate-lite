@@ -44,6 +44,7 @@ def main() -> int:
         cwd=ROOT,
         capture_output=True,
         text=True,
+        timeout=120,
     )
     print(proc.stdout)
     if proc.stderr:
